@@ -4,6 +4,7 @@
 #include <memory>
 #include <QString>
 #include <QVector>
+#include <QMap>
 
 #include "Util.h"
 
@@ -96,13 +97,18 @@ public :
 	shared_ptr <HistoricalDatabase> parseDatabase (QString fileName, const QString& fileContents);
 
 private :
+	QMap <QString, int> monthNameToIndex;
+
 	HistoricalDatabase* currentDatabase;
 	QVector <QString> currentBlock;
 	int currentBlockFirstLine;
 	QString currentFileName;
 	QString currentEntryTag;
 
-	QMap <QString, int> monthNameToIndex;
+	QMap <int, int> entryIndexToLine;
+	ComplexDate lastDate;
+	bool forwardDate;
+	QVector <int> forwardDateEntriesIndices;
 
 	void processCurrentBlock();
 	bool tryExtractSimpleDate (QString& line, SimpleDate& date);

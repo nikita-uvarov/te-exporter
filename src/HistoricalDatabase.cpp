@@ -185,7 +185,7 @@ void DatabaseParser::processCurrentBlock()
 			blockParseError (0, "Unclosed square braces in a tag entry: '" + firstLine + "'");
 
 		if (currentBlock.size() != 1)
-			blockParseError (1, "Multiline tag entry.");
+			blockParseError (1, "Multi-line tag entry.");
 
 		QString newTagName = firstLine.mid (1, firstLine.length() - 2);
 		if (newTagName.isEmpty())
@@ -196,6 +196,20 @@ void DatabaseParser::processCurrentBlock()
 				blockParseError (0, QString ("Tag name contains illegal character '") + c + "' (only '-' and latin letters are allowed).");
 
 		currentEntryTag = newTagName;
+		return;
+	}
+	else if (firstLine[0] == '-')
+	{
+		if (firstLine != "---")
+			blockParseError (0, "Expected a separator '---' after the beginning dash, met '" + firstLine + "'.");
+
+		if (currentBlock.size() != 1)
+			blockParseError (1, "Multi-line separator entry.");
+
+		if (forwardDate)
+			blockParseWarning (0, "The entries are already being assigned a next event's date due to previous separator or file beginning.");
+
+		forwardDate = true;
 		return;
 	}
 
@@ -231,7 +245,16 @@ void DatabaseParser::processCurrentBlock()
 				eventDescription += (i > 1 ? "\n" : "") + currentBlock[i];
 			}
 
+			entryIndexToLine[currentDatabase->entries.size()] = currentBlockFirstLine;
 			currentDatabase->entries.push_back (new HistoricalEvent (date, currentEntryTag, firstLine, eventDescription));
+
+			// Resolve forward dates
+			for (unsigned i = 0; i < forwardDateEntriesIndices.size(); i++)
+				currentDatabase->entries[forwardDateEntriesIndices[i]]->date = date;
+			forwardDateEntriesIndices.clear();
+			forwardDate = false;
+			lastDate = date;
+
 			return;
 		}
 	}
@@ -298,7 +321,11 @@ void DatabaseParser::processCurrentBlock()
 				inverseQuestion += (i > 1 ? "\n" : "") + currentBlock[i];
 			}
 
-			currentDatabase->entries.push_back (new HistoricalTerm (ComplexDate(), currentEntryTag, beforeDash, afterDash, inverseQuestion));
+			entryIndexToLine[currentDatabase->entries.size()] = currentBlockFirstLine;
+			currentDatabase->entries.push_back (new HistoricalTerm (forwardDate ? ComplexDate() : lastDate, currentEntryTag, beforeDash, afterDash, inverseQuestion));
+
+			if (forwardDate)
+				forwardDateEntriesIndices.push_back ((int)currentDatabase->entries.size() - 1);
 		}
 	}
 }
@@ -313,6 +340,9 @@ shared_ptr <HistoricalDatabase> DatabaseParser::parseDatabase (QString fileName,
 	currentBlock.clear();
 	currentFileName = fileName;
 	currentEntryTag = "no-tag";
+
+	forwardDate = true;
+	forwardDateEntriesIndices.clear();
 
 	bool cPlusPlusCommentOpen = false;
 
@@ -364,6 +394,14 @@ shared_ptr <HistoricalDatabase> DatabaseParser::parseDatabase (QString fileName,
 
 			currentBlock.clear();
 		}
+	}
+
+	for (unsigned i = 0; i < forwardDateEntriesIndices.size(); i++)
+	{
+		int line = entryIndexToLine[forwardDateEntriesIndices[i]];
+		assert (line > 0, "An entry in a line map is missing or invalid for database entry (index: " + QString::number (forwardDateEntriesIndices[i]) + ")");
+		currentDatabase->messages.push_back (FileLocationMessage (currentFileName, line, FileLocationMessageType::ERROR,
+																  "Failed to assign a date to a dateless entry."));
 	}
 
 	return database;

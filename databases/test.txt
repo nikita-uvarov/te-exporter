@@ -1,8 +1,12 @@
 // Тестовый файл исторической базы данных
 
-что за хрень?
+forward date term - term definition.
 
 25.11.1996 - my birthday. This dash gets ignored: \- ok
+
+---
+
+test term - test definition.
 
 11.Июля.2001 - день рождения Маши
 
