@@ -46,6 +46,10 @@ void DatabaseExporter::dump()
 		{
 			qstdout << ", term name: '" << term->termName << "', definition: '" << term->termDefinition << "', inverse question: '" << term->inverseQuestion << "'" << endl;
 		}
+		else if (HistoricalQuestion* question = dynamic_cast <HistoricalQuestion*> (e))
+		{
+			qstdout << ", question: '" << question->question << "', answer: '" << question->answer << "'" << endl;
+		}
 		else
 		{
 			qstdout << endl;

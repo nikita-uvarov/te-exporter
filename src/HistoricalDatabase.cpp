@@ -53,7 +53,7 @@ bool isEndingSymbol (QChar c)
 	return c == '.' || c == '?' || c == '!' || c == ')';
 }
 
-QString replaceEscapes(QString s)
+QString replaceEscapes (QString s)
 {
 	return s.replace ('\\', "");
 }
@@ -115,9 +115,9 @@ bool DatabaseParser::tryExtractSimpleDate (QString& line, SimpleDate& date)
 
 	for (int numComponents = 3; numComponents >= 1; numComponents--)
 	{
-		QRegExp dateRegExp (numComponents == 3 ? "(\\d+)\\.(\\d+|" + monthesMatch + ")\\.(\\d+)" :
-							numComponents == 2 ? "(\\d+|" + monthesMatch + ")\\.(\\d+)" :
-												 "(\\d+)");
+		QRegExp dateRegExp (numComponents == 3 ? "^(\\d+)\\.(\\d+|" + monthesMatch + ")\\.(\\d+)" :
+							numComponents == 2 ? "^(\\d+|" + monthesMatch + ")\\.(\\d+)" :
+												 "^(\\d+)");
 		dateRegExp.setCaseSensitivity (Qt::CaseInsensitive);
 		dateRegExp.setPatternSyntax (QRegExp::RegExp2);
 
@@ -246,7 +246,7 @@ void DatabaseParser::processCurrentBlock()
 			}
 
 			entryIndexToLine[currentDatabase->entries.size()] = currentBlockFirstLine;
-			currentDatabase->entries.push_back (new HistoricalEvent (date, currentEntryTag, firstLine, eventDescription));
+			currentDatabase->entries.push_back (new HistoricalEvent (date, currentEntryTag, replaceEscapes (firstLine), replaceEscapes (eventDescription.trimmed())));
 
 			// Resolve forward dates
 			for (unsigned i = 0; i < forwardDateEntriesIndices.size(); i++)
@@ -322,11 +322,46 @@ void DatabaseParser::processCurrentBlock()
 			}
 
 			entryIndexToLine[currentDatabase->entries.size()] = currentBlockFirstLine;
-			currentDatabase->entries.push_back (new HistoricalTerm (forwardDate ? ComplexDate() : lastDate, currentEntryTag, beforeDash, afterDash, inverseQuestion));
+			currentDatabase->entries.push_back (new HistoricalTerm (forwardDate ? ComplexDate() : lastDate, currentEntryTag,
+																	replaceEscapes (beforeDash), replaceEscapes (afterDash), replaceEscapes (inverseQuestion.trimmed())));
 
 			if (forwardDate)
 				forwardDateEntriesIndices.push_back ((int)currentDatabase->entries.size() - 1);
+
+			return;
 		}
+	}
+
+	{
+		QRegExp unescapedDash ("^-|[^\\\\]-");
+
+		// Treat as a question
+		QString answer = "";
+
+		for (unsigned i = 0; i < currentBlock.size(); i++)
+		{
+			if (unescapedDash.indexIn (currentBlock[i]) != -1)
+				blockParseWarning (i, "Unescaped dash met in a question entry.");
+
+			if (i > 0)
+				answer += (i > 1 ? "\n" : "") + currentBlock[i];
+		}
+
+		answer = replaceEscapes (answer).trimmed();
+		if (answer == "")
+			blockParseError (0, "Expected a non-empty answer in a question entry.");
+
+		if (!isEndingSymbol (firstLine[firstLine.length() - 1]) && (firstLine.length() <= 1 || firstLine[firstLine.length() - 2] != '\\'))
+			blockParseWarning (0, QString ("Question ends in unescaped '") + firstLine[firstLine.length() - 1] + "'.");
+
+		entryIndexToLine[currentDatabase->entries.size()] = currentBlockFirstLine;
+		currentDatabase->entries.push_back (new HistoricalQuestion (forwardDate ? ComplexDate() : lastDate, currentEntryTag,
+																    replaceEscapes (firstLine), answer));
+
+		if (forwardDate)
+			forwardDateEntriesIndices.push_back ((int)currentDatabase->entries.size() - 1);
+
+		return;
 	}
 }
 
