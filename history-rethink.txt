@@ -60,12 +60,14 @@
 
 // Сценарии экспорта
 
-rdb first first-quiz.txt
-rdb second second-quiz.txt
+var="value"
+
+rdb first "first-quiz.txt"
+rdb second "second-quiz.txt"
 mergedb quiz first second
 filtertag filtered mergedb alexander-i-domestic-policy
 
-export filtered
+export filtered -export-terms="definition-to-name"
 
 // Фактически, задача на одно утро на парсинг.
 // Вызов: te-exporter scenery.txt

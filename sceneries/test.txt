@@ -1,0 +1,4 @@
+# Comments like in bash
+
+load -db "db" -months "../configs/months.txt" -path "../databases/test.txt" # Paths relative to scenery
+export -db "db" -deck "test-deck" -path "/home/nikita/.dropbox-storage/Dropbox/Public" # ~ expansion

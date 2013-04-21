@@ -1,25 +1,33 @@
-#include "HistoricalDatabase.h"
-#include "DatabaseExporter.h"
+#include "SceneryExecutor.h"
+#include "Util.h"
 
 #include <QFile>
+#include <QDir>
+#include <QFileInfo>
+#include <memory>
 
-QString readContents (QString fileName)
-{
-	QFile file (fileName);
-	assert (file.exists(), "File '" + file.fileName() + "' could not be opened");
+using std::shared_ptr;
 
-	file.open (QIODevice::ReadOnly | QIODevice::Text);
-	QByteArray fileContents = file.readAll();
-	file.close();
-
-	return QString::fromUtf8 (fileContents);
-}
-
-int main()
+int main (int argc, char** argv)
 {
 	initializeStandardStreams();
+	verify (argc == 2, QString ("Usage: ") + argv[0] + " scenery-file");
 
-	QString monthNames = readContents ("../configs/months.txt");
+	QString sceneryContents = readContents (argv[1]);
+
+	QDir::setCurrent (QFileInfo (argv[1]).absolutePath());
+
+	shared_ptr <SceneryExecutor> sceneryExecutor (new SceneryExecutor (sceneryContents));
+	if (!sceneryExecutor->parse())
+	{
+		qstdout << "There were parse errors, exiting." << endl;
+		return 1;
+	}
+
+	sceneryExecutor->dump();
+	sceneryExecutor->execute();
+
+	/*QString monthNames = readContents ("../configs/months.txt");
 
 	QString fileName = "../databases/test.txt";
 	QString fileContents = readContents (fileName);
@@ -34,7 +42,7 @@ int main()
 	exporter->printMessages();
 
 	qstdout << "\nDatabase dump:" << endl;
-	exporter->dump();
+	exporter->dump();*/
 
 	qstdout.flush();
 	qstderr.flush();

@@ -12,9 +12,19 @@ public :
 
 	void printMessages();
 	void dump();
+	void exportDatabase (QString deckName, QString exportPath);
 
 private :
 	HistoricalDatabase* database;
+
+	std::vector <QString> usedColumns;
+	std::vector < std::map <int, QString> > exportData;
+	std::map <int, QString> currentRow;
+
+	void exportEntry (HistoricalEntry* entry);
+
+	void setColumnValue (QString columnName, QString columnValue);
+	void submitRow();
 };
 
-#endif
+#endif // DATABASE_EXPORTER_H

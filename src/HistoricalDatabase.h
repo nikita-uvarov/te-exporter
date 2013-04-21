@@ -31,6 +31,8 @@ QTextStream& operator<< (QTextStream& stream, const SimpleDate& date);
 struct ComplexDate
 {
 	SimpleDate begin, end;
+
+	QString toString();
 };
 
 QTextStream& operator<< (QTextStream& stream, const ComplexDate& date);
@@ -118,4 +120,4 @@ private :
 	void blockParseWarning (int blockLine, QString what);
 };
 
-#endif
+#endif // HISTORICAL_DATABASE_H

@@ -56,3 +56,15 @@ bool FileLocationMessage::operator< (const FileLocationMessage& other) const
 
 	return false;
 }
+
+QString readContents (QString fileName)
+{
+	QFile file (fileName);
+	assert (file.exists(), "File '" + file.fileName() + "' could not be opened");
+
+	file.open (QIODevice::ReadOnly | QIODevice::Text);
+	QByteArray fileContents = file.readAll();
+	file.close();
+
+	return QString::fromUtf8 (fileContents);
+}

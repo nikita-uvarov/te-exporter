@@ -24,7 +24,7 @@ void _halt();
 #	define assert(condition, ...) ((void)(!(condition) && (_condition_failure_handler ("Assertion failed"   , #condition, __FILE__, __LINE__, ##__VA_ARGS__), 1) && (_halt(), 1)))
 #else
 #	define assert(condition, ...) ((void)sizeof (condition))
-#endif
+#endif // DEBUG_DISABLE_ASSERTIONS
 
 /* Common messages structures */
 
@@ -50,7 +50,9 @@ public :
 		fileName (fileName), line (line), type (type), message (message)
 	{}
 
-	bool operator< (const FileLocationMessage& other) const; 
+	bool operator< (const FileLocationMessage& other) const;
 };
 
-#endif
+QString readContents (QString fileName);
+
+#endif // UTIL_H

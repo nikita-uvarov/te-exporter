@@ -1,5 +1,7 @@
 #include "DatabaseExporter.h"
 
+#include <QFile>
+
 void DatabaseExporter::printMessages()
 {
 	qSort (database->messages);
@@ -56,4 +58,77 @@ void DatabaseExporter::dump()
 			failure ("Failed to print entry: unknown entry type.");
 		}
 	}
+}
+
+void DatabaseExporter::setColumnValue (QString columnName, QString columnValue)
+{
+	int id = -1;
+	for (int i = 0; i < usedColumns.size(); i++)
+		if (usedColumns[i] == columnName)
+		{
+			id = i;
+			break;
+		}
+
+	if (id == -1)
+	{
+		id = (int)usedColumns.size();
+		usedColumns.push_back (columnName);
+	}
+
+	currentRow[id] = columnValue;
+}
+
+void DatabaseExporter::submitRow()
+{
+	exportData.push_back (currentRow);
+	currentRow.clear();
+}
+
+void DatabaseExporter::exportDatabase (QString deckName, QString exportPath)
+{
+	usedColumns.clear();
+	exportData.clear();
+	currentRow.clear();
+
+	QFile file (exportPath + "/" + deckName + ".txt");
+	file.open (QFile::WriteOnly);
+
+	QTextStream stream (&file);
+	stream.setCodec("UTF-8");
+
+	for (HistoricalEntry* e: database->entries)
+		exportEntry (e);
+
+	for (unsigned i = 0; i < usedColumns.size(); i++)
+		stream << usedColumns[i] << ((i + 1) == usedColumns.size() ? "\n" : "\t");
+
+	for (std::map <int, QString>& row : exportData)
+		for (unsigned i = 0; i < usedColumns.size(); i++)
+			stream << row[i] << ((i + 1) == usedColumns.size() ? "\n" : "\t");
+
+	qstdout << "Deck '" << deckName << "' exported to '" << file.fileName() << "'." << endl;
+}
+
+void DatabaseExporter::exportEntry (HistoricalEntry* entry)
+{
+	if (HistoricalEvent* event = dynamic_cast <HistoricalEvent*> (entry))
+	{
+		setColumnValue ("Text 1", event->date.toString().replace ('\n', '|'));
+		setColumnValue ("Text 2", event->eventName.replace ('\n', '|'));
+		submitRow();
+	}
+	else if (HistoricalTerm* term = dynamic_cast <HistoricalTerm*> (entry))
+	{
+		//qstdout << ", term name: '" << term->termName << "', definition: '" << term->termDefinition << "', inverse question: '" << term->inverseQuestion << "'" << endl;
+	}
+	else if (HistoricalQuestion* question = dynamic_cast <HistoricalQuestion*> (entry))
+	{
+		//qstdout << ", question: '" << question->question << "', answer: '" << question->answer << "'" << endl;
+	}
+	else
+	{
+		failure ("Failed to export entry: unknown entry type.");
+	}
+
 }

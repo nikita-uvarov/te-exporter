@@ -48,6 +48,14 @@ QTextStream& operator<< (QTextStream& stream, const ComplexDate& date)
 	return stream;
 }
 
+QString ComplexDate::toString()
+{
+	QString str = "";
+	QTextStream stream (&str);
+	stream << *this;
+	return str;
+}
+
 bool isEndingSymbol (QChar c)
 {
 	return c == '.' || c == '?' || c == '!' || c == ')';
