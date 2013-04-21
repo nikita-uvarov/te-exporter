@@ -1,0 +1,4 @@
+[Project]
+Name=te-exporter
+Manager=KDevCMakeManager
+VersionControl=kdevgit
