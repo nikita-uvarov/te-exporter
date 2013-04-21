@@ -6,9 +6,15 @@
 class DatabaseExporter
 {
 public :
-	DatabaseExporter (HistoricalDatabase* database);
+	DatabaseExporter (HistoricalDatabase* database) :
+		database (database)
+	{}
 
+	void printMessages();
 	void dump();
+
+private :
+	HistoricalDatabase* database;
 };
 
 #endif
