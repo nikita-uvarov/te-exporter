@@ -53,6 +53,11 @@ bool isEndingSymbol (QChar c)
 	return c == '.' || c == '?' || c == '!' || c == ')';
 }
 
+QString replaceEscapes(QString s)
+{
+	return s.replace ('\\', "");
+}
+
 bool SimpleDate::isParsed() const
 {
 	return year != SIMPLE_DATE_NOT_PARSED && month != SIMPLE_DATE_NOT_PARSED && day != SIMPLE_DATE_NOT_PARSED;
@@ -169,7 +174,30 @@ bool DatabaseParser::tryExtractDate (QString& line, ComplexDate& date)
 
 void DatabaseParser::processCurrentBlock()
 {
+	assert (!currentBlock.isEmpty());
 	QString firstLine = currentBlock[0];
+	assert (!firstLine.isEmpty());
+
+	// Some constructions can be detected easily
+	if (firstLine[0] == '[')
+	{
+		if (firstLine[firstLine.size() - 1] != ']')
+			blockParseError (0, "Unclosed square braces in a tag entry: '" + firstLine + "'");
+
+		if (currentBlock.size() != 1)
+			blockParseError (1, "Multiline tag entry.");
+
+		QString newTagName = firstLine.mid (1, firstLine.length() - 2);
+		if (newTagName.isEmpty())
+			blockParseError (0, "Empty tag name.");
+
+		for (QChar c: newTagName)
+			if (!(c == '-' || (c.toLower() >= 'a' && c.toLower() <= 'z')))
+				blockParseError (0, QString ("Tag name contains illegal character '") + c + "' (only '-' and latin letters are allowed).");
+
+		currentEntryTag = newTagName;
+		return;
+	}
 
 	{
 		// Try to treat as a dated event
@@ -205,6 +233,72 @@ void DatabaseParser::processCurrentBlock()
 
 			currentDatabase->entries.push_back (new HistoricalEvent (date, currentEntryTag, firstLine, eventDescription));
 			return;
+		}
+	}
+
+	{
+		// Try to treat as a term definition
+
+		int numBracketsOpen = 0, dashPosition = -1;
+		QChar punctuationMet = 0;
+		bool multipleDashes = false;
+		bool escaped = false;
+
+		for (int i = 0; i < (int)firstLine.size(); i++)
+		{
+			if (firstLine[i] == '(')
+				numBracketsOpen++;
+			else if (firstLine[i] == ')')
+				numBracketsOpen--;
+			else if (firstLine[i] == '-' && !escaped)
+			{
+				if (dashPosition != -1)
+					multipleDashes = true;
+				else
+					dashPosition = i;
+			}
+			else if (dashPosition == -1 && (firstLine[i] == ',' || firstLine[i] == '.' || firstLine[i] == '?'))
+				punctuationMet = firstLine[i];
+
+			if (firstLine[i] == '\\')
+				escaped = true;
+			else
+				escaped = false;
+		}
+
+		if (dashPosition != -1)
+		{
+			QString beforeDash = firstLine.left (dashPosition).trimmed();
+			if (beforeDash.isEmpty())
+				blockParseError (0, "Empty term name.");
+
+			QString afterDash = firstLine.right (firstLine.length() - dashPosition - 1).trimmed();
+			if (afterDash.isEmpty())
+				blockParseError (0, "Empty term definition.");
+
+			if (multipleDashes)
+				blockParseWarning (0, "Unescaped dash in a term definition.");
+
+			if (!punctuationMet.isNull())
+				blockParseWarning (0, QString ("Unescaped punctuation symbol '") + punctuationMet + "' met outside of parentheses.");
+
+			QChar definitionEnd = afterDash[afterDash.length() - 1];
+			if ((afterDash.length() == 1 || afterDash[afterDash.length() - 2] != '\\') &&
+				(!isEndingSymbol (definitionEnd) || definitionEnd == '?'))
+				blockParseWarning (0, QString ("Term definition ends in unescaped '") + definitionEnd + "'.");
+
+			QRegExp unescapedDash ("^-|[^\\\\]-");
+
+			QString inverseQuestion = "";
+			for (unsigned i = 1; i < currentBlock.size(); i++)
+			{
+				if (unescapedDash.indexIn (currentBlock[i]) != -1)
+					blockParseWarning (i, "Unescaped dash met in a term inverse question.");
+
+				inverseQuestion += (i > 1 ? "\n" : "") + currentBlock[i];
+			}
+
+			currentDatabase->entries.push_back (new HistoricalTerm (ComplexDate(), currentEntryTag, beforeDash, afterDash, inverseQuestion));
 		}
 	}
 }

@@ -87,6 +87,7 @@ public :
 };
 
 bool isEndingSymbol (QChar c);
+QString replaceEscapes (QString s);
 
 class DatabaseParser
 {
