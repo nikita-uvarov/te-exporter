@@ -55,4 +55,16 @@ public :
 
 QString readContents (QString fileName);
 
+/* By-hand localization support */
+
+class LocalizationSettings
+{
+public :
+	void parse (QString contents);
+	const QString& getLocalizedString (const QString& key);
+
+private :
+	QMap <QString, QString> strings;
+};
+
 #endif // UTIL_H

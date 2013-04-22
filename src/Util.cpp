@@ -1,7 +1,10 @@
 #include "Util.h"
 
-#include <QFile>
 #include <cstdio>
+
+#include <QString>
+#include <QStringList>
+#include <QFile>
 
 QTextStream qstdin, qstdout, qstderr;
 QFile stdinFile, stdoutFile, stderrFile;
@@ -67,4 +70,35 @@ QString readContents (QString fileName)
 	file.close();
 
 	return QString::fromUtf8 (fileContents);
+}
+
+const QString& LocalizationSettings::getLocalizedString(const QString& key)
+{
+	verify (strings.count (key) > 0, "String not found in localization file: '" + key + "'.");
+	return strings[key];
+}
+
+void LocalizationSettings::parse (QString contents)
+{
+	QStringList lines = contents.split ('\n');
+
+	for (unsigned int i = 0; i < lines.size(); i++)
+	{
+		QString line = lines[i];
+		int commentBeginning = line.indexOf ('#');
+		if (commentBeginning != -1)
+			line = line.left (commentBeginning);
+		line = line.trimmed();
+
+		if (line.isEmpty()) continue;
+
+		QRegExp lineFormat ("^([a-z0-9A-Z_]+)=\"([^\"]*)\"$");
+		if (lineFormat.indexIn (line) == -1)
+			failure ("Localization settings file: invalid line " + QString::number (i + 1) + " format.");
+
+		QString key = lineFormat.cap (1), value = lineFormat.cap (2);
+		verify (strings.count (key) == 0, "Duplicate key '" + key + "' in localization file.");
+
+		strings[key] = value;
+	}
 }

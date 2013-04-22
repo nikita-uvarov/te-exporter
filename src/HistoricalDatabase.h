@@ -95,7 +95,7 @@ QString replaceEscapes (QString s);
 class DatabaseParser
 {
 public :
-	void parseMonthNames (const QString& monthNames);
+	void parseMonthNames (LocalizationSettings* settings);
 	shared_ptr <HistoricalDatabase> parseDatabase (QString fileName, const QString& fileContents);
 
 private :

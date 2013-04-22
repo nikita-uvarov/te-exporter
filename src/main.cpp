@@ -24,7 +24,7 @@ int main (int argc, char** argv)
 		return 1;
 	}
 
-	sceneryExecutor->dump();
+	//sceneryExecutor->dump();
 	sceneryExecutor->execute();
 
 	/*QString monthNames = readContents ("../configs/months.txt");

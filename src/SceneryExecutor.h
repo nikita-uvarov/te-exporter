@@ -8,6 +8,7 @@
 #include <QSet>
 
 #include "HistoricalDatabase.h"
+#include "DatabaseExporter.h"
 
 using std::shared_ptr;
 
@@ -45,6 +46,9 @@ private :
 	QVector <SceneryCommand> commands;
 
 	QMap <QString, shared_ptr <HistoricalDatabase> > databases;
+	QMap <QString, shared_ptr <HistoricalDeck> > decks;
+
+	shared_ptr <LocalizationSettings> localization;
 
 	void executeCommand (SceneryCommand& cmd);
 };

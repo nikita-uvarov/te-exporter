@@ -1,4 +1,16 @@
 # Comments like in bash
 
-load -db "db" -months "../configs/months.txt" -path "../databases/test.txt" # Paths relative to scenery
-export -db "db" -deck "test-deck" -path "/home/nikita/.dropbox-storage/Dropbox/Public" # ~ expansion
+load_localization -path "../configs/localization.txt"
+
+load -db "db" -path "../databases/test.txt" # Paths relative to scenery
+
+filter -source "db" -tag "themea" -destination "themea"
+filter -source "db" -tag "themeb" -destination "themeb"
+filter -source "db" -tag "themec" -destination "themec"
+
+export -db "themea" -deck "test-deck" -event-export-mode "name-to-date-and-definition" -term-export-mode "inverse"
+export -db "themec" -deck "test-deck" -event-export-mode "date-to-name" -term-export-mode "direct"
+
+remove_duplicates -deck "test-deck"
+
+save -deck "test-deck" -path "~/.dropbox-storage/Dropbox/Public/test-deck.txt"

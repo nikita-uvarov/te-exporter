@@ -99,18 +99,16 @@ void DatabaseParser::blockParseError (int blockLine, QString what)
 	throw DatabaseParserException();
 }
 
-void DatabaseParser::parseMonthNames (const QString& monthNames)
+void DatabaseParser::parseMonthNames (LocalizationSettings* settings)
 {
-	QStringList monthes = monthNames.split ('\n', QString::SkipEmptyParts);
-	assert (monthes.size() == 12, "The monthes file must contain precisely 12 non-empty lines (" + QString::number (monthes.size()) + " present).");
-
-	for (unsigned i = 0; i < monthes.size(); i++)
+	for (unsigned i = 1; i <= 12; i++)
 	{
-		QStringList monthNames = monthes[i].split (' ', QString::SkipEmptyParts);
+		QString variants = settings->getLocalizedString (QString ("month_") + (i < 10 ? "0" : "") + QString::number (i) + "_output");
+		QStringList monthNames = variants.split (' ', QString::SkipEmptyParts);
 		assert (!monthNames.empty(), "Every month must have at least one name: missing month " + QString::number(i + 1));
 
 		for (QString name: monthNames)
-			monthNameToIndex[name] = i + 1;
+			monthNameToIndex[name.toLower()] = i;
 	}
 }
 
@@ -226,7 +224,7 @@ void DatabaseParser::processCurrentBlock()
 		ComplexDate date;
 		if (tryExtractDate (firstLine, date))
 		{
-			qstdout << "Got " << date << " and string '" << firstLine << "'" << endl;
+			//qstdout << "Got " << date << " and string '" << firstLine << "'" << endl;
 
 			firstLine = firstLine.trimmed();
 			if (firstLine.isEmpty() || firstLine[0] != '-')
@@ -238,6 +236,8 @@ void DatabaseParser::processCurrentBlock()
 			if (firstLine.isEmpty())
 				blockParseError (0, "Empty event name.");
 
+			firstLine[0] = firstLine[0].toUpper();
+
 			if (isEndingSymbol (firstLine[firstLine.length() - 1]) && (firstLine.length() <= 1 || firstLine[firstLine.length() - 2] != '\\'))
 				blockParseWarning (0, QString ("An event name ends in unescaped '") + firstLine[firstLine.length() - 1] + "'");
 
@@ -246,8 +246,8 @@ void DatabaseParser::processCurrentBlock()
 			QString eventDescription = "";
 			for (unsigned i = 0; i < currentBlock.size(); i++)
 			{
-				if (unescapedDash.indexIn (i == 0 ? firstLine : currentBlock[i]) != -1)
-					blockParseWarning (i, "Unescaped dash met outside of a date interval/definition construction.");
+				//if (unescapedDash.indexIn (i == 0 ? firstLine : currentBlock[i]) != -1)
+				//	blockParseWarning (i, "Unescaped dash met outside of a date interval/definition construction.");
 
 				if (i == 0) continue;
 				eventDescription += (i > 1 ? "\n" : "") + currentBlock[i];
@@ -307,6 +307,8 @@ void DatabaseParser::processCurrentBlock()
 			if (afterDash.isEmpty())
 				blockParseError (0, "Empty term definition.");
 
+			afterDash[0] = afterDash[0].toUpper();
+
 			if (multipleDashes)
 				blockParseWarning (0, "Unescaped dash in a term definition.");
 
@@ -348,7 +350,7 @@ void DatabaseParser::processCurrentBlock()
 
 		for (unsigned i = 0; i < currentBlock.size(); i++)
 		{
-			if (unescapedDash.indexIn (currentBlock[i]) != -1)
+			if (unescapedDash.indexIn (currentBlock[i]) != -1 && i == 0)
 				blockParseWarning (i, "Unescaped dash met in a question entry.");
 
 			if (i > 0)
@@ -386,7 +388,7 @@ shared_ptr <HistoricalDatabase> DatabaseParser::parseDatabase (QString fileName,
 
 	forwardDate = true;
 	forwardDateEntriesIndices.clear();
-
+//
 	bool cPlusPlusCommentOpen = false;
 
 	for (int lineNumber = 0; lineNumber < lines.size(); lineNumber++)
