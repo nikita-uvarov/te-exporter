@@ -63,7 +63,7 @@ bool isEndingSymbol (QChar c)
 
 QString replaceEscapes (QString s)
 {
-	return s.replace ('\\', "");
+	return s.replace ("\\n", "\n").replace ('\\', "");
 }
 
 bool SimpleDate::isParsed() const
