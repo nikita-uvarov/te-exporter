@@ -216,6 +216,9 @@ void SceneryExecutor::executeCommand (SceneryCommand& cmd)
 		if (decks.count (deckName) == 0)
 			failure ("No deck '" + deckName + "' found.");
 
+		if (exportDirectoryUrl.isNull())
+			failure ("Export directory URL not specified. (see set_export_directory_url)");
+
 		fileName = FileReaderSingletone::instance().expandPathMacros (fileName);
 		QFile exportTo (fileName);
 		verify (exportTo.open (QIODevice::WriteOnly | QIODevice::Text), "Failed to open save destination file '" + fileName + "'.");
@@ -224,7 +227,15 @@ void SceneryExecutor::executeCommand (SceneryCommand& cmd)
 
 		shared_ptr <HistoricalDeck> deck = decks[deckName];
 		qstdout << "Writing deck '" << deckName << "' to file '" << fileName << "'." << endl;
+
+		QString mediaDirectoryName = QFileInfo (fileName).baseName() + "-media";
+		deck->setMediaDirectoryName (mediaDirectoryName);
+
+		// The trailing slash is important.
+		exportStream << "*\tmedia-dir\t" << exportDirectoryUrl + mediaDirectoryName + "/" << endl;
+
 		deck->writeDeck (exportStream);
+		deck->saveResources (fileName, true);
 	}
 	else if (cmd.name == "remove_duplicates")
 	{
@@ -262,6 +273,14 @@ void SceneryExecutor::executeCommand (SceneryCommand& cmd)
 		}
 
 		qstdout << "Database '" << sourceDb << "' filtered into '" << destinationDb << "' by tag '" << tagFilter << "'." << endl;
+	}
+	else if (cmd.name == "set_export_directory_url")
+	{
+		exportDirectoryUrl = cmd.getArgument ("url");
+		if (!exportDirectoryUrl.startsWith ("http://"))
+			qstdout << "WARNING: export directory URL doesn't start with 'http://'! Protocol specification is required by Flashcards Deluxe." << endl;
+		if (!exportDirectoryUrl.endsWith ("/"))
+			exportDirectoryUrl += "/";
 	}
 	else
 	{

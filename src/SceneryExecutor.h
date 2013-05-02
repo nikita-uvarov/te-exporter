@@ -34,7 +34,7 @@ class SceneryExecutor
 {
 public :
 	SceneryExecutor (const QString& sceneryContents) :
-		sceneryContents (sceneryContents)
+		sceneryContents (sceneryContents), exportDirectoryUrl (QString::null)
 	{}
 
 	bool parse();
@@ -44,6 +44,7 @@ public :
 private :
 	QString sceneryContents;
 	QVector <SceneryCommand> commands;
+	QString exportDirectoryUrl;
 
 	QMap <QString, shared_ptr <HistoricalDatabase> > databases;
 	QMap <QString, shared_ptr <HistoricalDeck> > decks;

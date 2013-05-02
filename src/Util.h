@@ -64,6 +64,7 @@ public :
 	QPair <QString, QString> readContents (QString fileName, QString context);
 
 	QString expandPathMacros (QString path);
+	QString getAbsolutePath (QString fileName, QString context);
 
 	static FileReaderSingletone& instance();
 private :

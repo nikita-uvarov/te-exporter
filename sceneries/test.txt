@@ -1,13 +1,15 @@
 # Comments like in bash
 
-#load_localization -path "../configs/localization.txt"
+set_export_directory_url -url "http://dl.dropbox.com/u/3520554/"
 
 load -db "db" -path "../databases/test.txt" # Paths relative to scenery
 
+filter -source "db" -tag "front-page" -destination "front-page"
 filter -source "db" -tag "themea" -destination "themea"
 filter -source "db" -tag "themeb" -destination "themeb"
 filter -source "db" -tag "themec" -destination "themec"
 
+export -db "front-page" -deck "test-deck" -event-export-mode "name-to-date-and-definition" -term-export-mode "inverse"
 export -db "themea" -deck "test-deck" -event-export-mode "name-to-date-and-definition" -term-export-mode "inverse"
 export -db "themec" -deck "test-deck" -event-export-mode "date-to-name" -term-export-mode "direct"
 

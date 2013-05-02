@@ -1,11 +1,12 @@
 // A preamble is usually a gray text in parentheses after the main question part
-#push simple_date_to_name_preamble: название события
-#push complex_date_to_name_preamble: название периода
-#push name_to_simple_date_preamble: дата
-#push name_to_complex_date_preamble: временные рамки
-#push name_to_simple_date_and_definition_preamble: дата, описание
-#push name_to_complex_date_and_definition_preamble: временные рамки, описание
+#push simple_date_to_name_preamble: $preamble_style_opening название события$preamble_style_closing
+#push complex_date_to_name_preamble: $preamble_style_opening название периода$preamble_style_closing
+#push name_to_simple_date_preamble: $preamble_style_opening дата$preamble_style_closing
+#push name_to_complex_date_preamble: $preamble_style_opening временные рамки$preamble_style_closing
+#push name_to_simple_date_and_definition_preamble: $preamble_style_opening дата, описание$preamble_style_closing
+#push name_to_complex_date_and_definition_preamble: $preamble_style_opening временные рамки, описание$preamble_style_closing
 
-#push term_to_definition_preamble: определение термина
-#push definition_to_term_preamble: название термина
+#push term_to_definition_preamble: $preamble_style_opening определение термина$preamble_style_closing
+#push definition_to_term_preamble: $preamble_style_opening название термина$preamble_style_closing
 
+// kate: syntax ActionScript 2.0;

@@ -1,5 +1,11 @@
 // Тестовый файл исторической базы данных
 
+#include physics-deck-style.txt
+
+[themea]
+
+#include front-page.txt
+
 [themea]
 
 6.ноября.1812 - битва под Красным
@@ -22,4 +28,5 @@
 Отличается ли характер реформ Александра I до войны 1812 года и после?
 Да, отличается: послевоенные реформы гораздо менее успешны.
 
-#include include-test.txt
+Can we write formulas, captain?
+Yes: 'PV=nuRT^deltay^'

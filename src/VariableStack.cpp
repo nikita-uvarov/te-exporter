@@ -38,18 +38,19 @@ bool VariableStack::popVariable (QString name)
 {
 	if (name == "")
 	{
-		for (QVector < QPair <int, QString> >& v: variableNameToVersionPairs)
-			if (!v.empty() && v.back().first == currentVersion)
-			{
-				QVector <QString>& valueStack = currentStackState[v.back().second];
-				assert (!valueStack.empty());
-				valueStack.pop_back();
+		if (stackVariables.empty())
+			return false;
 
-				v.push_back (QPair <int, QString> (++currentVersion, valueStack.isEmpty() ? QString::null : valueStack.back()));
-				return true;
-			}
+		QString last = stackVariables.back();
+		stackVariables.pop_back();
 
-		return false;
+		QVector <QString>& valueStack = currentStackState[last];
+		assert (!valueStack.empty());
+		valueStack.pop_back();
+
+		variableNameToVersionPairs[last].push_back (QPair <int, QString> (++currentVersion, valueStack.isEmpty() ? QString::null : valueStack.back()));
+
+		return true;
 	}
 	else
 	{
@@ -59,6 +60,17 @@ bool VariableStack::popVariable (QString name)
 		QVector <QString>& valueStack = currentStackState[name];
 		if (valueStack.empty())
 			return false;
+
+		bool erased = false;
+		for (int i = stackVariables.size() - 1; i >= 0; i--)
+			if (stackVariables[i] == name)
+			{
+				stackVariables.erase (stackVariables.begin() + i);
+				erased = true;
+				break;
+			}
+
+		assert (erased);
 
 		valueStack.pop_back();
 		variableNameToVersionPairs[name].push_back (QPair <int, QString> (++currentVersion, valueStack.isEmpty() ? QString::null : valueStack.back()));
@@ -88,10 +100,10 @@ void VariableStack::pushVariable (QString name, QString value)
 			while (i < value.length() && value[i] != ' ')
 				subName += value[i++];
 
-			if (name.isEmpty())
+			if (subName.isEmpty())
 				failure ("Invalid value '" + original + "' for variable '" + subName + "': unescaped dollar sign found.");
 
-			QString subWith = currentState().getVariableValue (name);
+			QString subWith = currentState().getVariableValue (subName);
 			if (subWith.isNull()) subWith = "";
 
 			value = value.left (trimFrom) + subWith + (i < value.length() ? value.right (value.length() - i - 1) : "");
@@ -101,6 +113,19 @@ void VariableStack::pushVariable (QString name, QString value)
 
 	//qstderr << "Set variable '" + name + "' to '" + value + "'" << endl;
 
+	stackVariables.push_back (name);
 	currentStackState[name].push_back (value);
 	variableNameToVersionPairs[name].push_back (QPair <int, QString> (++currentVersion, value));
 }
+
+void VariableStack::dump()
+{
+	for (auto it = variableNameToVersionPairs.begin(); it != variableNameToVersionPairs.end(); it++)
+	{
+		qstderr << "Variable '" << it.key() << "':" << endl;
+		for (auto pair = it.value().begin(); pair != it.value().end(); pair++)
+			qstderr << "Version " << pair->first << " value '" << pair->second << "'." << endl;
+		qstderr << endl;
+	}
+}
+

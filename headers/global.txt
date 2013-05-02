@@ -1,11 +1,20 @@
+// Localization defaults
+
 #include input-month-names-en.txt
 #include input-month-names-ru.txt
 #include output-month-names-ru.txt
+
+// Color scheme file must be included prior to preambles file
+#include color-scheme-light.txt
 #include preambles-ru.txt
 
-/*[themea]
+// Default settings
 
-41.11.2323 - Some event
+#push question_back_use_image: true
+#push question_front_use_image: false
 
-Test entry?
-Wooohooo...*/
+// Default replacements
+
+#push_replacement_dash_&mdash;_
+
+// kate: syntax ActionScript 2.0;

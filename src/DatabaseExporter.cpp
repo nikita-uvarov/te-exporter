@@ -2,6 +2,9 @@
 
 #include <QFile>
 #include <QStringList>
+#include <QDir>
+#include <QDateTime>
+#include <QProcess>
 
 void DatabaseExporter::printMessages()
 {
@@ -115,6 +118,69 @@ void HistoricalDeck::removeDuplicates()
 		}
 }
 
+QString HistoricalDeck::getResourceDeckPath (QString resourceAbsolutePath)
+{
+	if (resourceAbsoluteToDeckPathMap.count (resourceAbsolutePath) > 0)
+		return resourceAbsoluteToDeckPathMap[resourceAbsolutePath];
+
+	int dotPosition = resourceAbsolutePath.lastIndexOf ('.');
+	verify (dotPosition != -1, "Resource '" + resourceAbsolutePath + "' has no extension.");
+	QString extension = resourceAbsolutePath.right (resourceAbsolutePath.length() - dotPosition);
+	QString newName = QString::number (resourceAbsoluteToDeckPathMap.size() + 1) + extension;
+	resourceAbsoluteToDeckPathMap[resourceAbsolutePath] = newName;
+	return newName;
+}
+
+void HistoricalDeck::setMediaDirectoryName (QString name)
+{
+	mediaDirectoryName = name;
+}
+
+void HistoricalDeck::saveResources (QString deckFileName, bool verbose)
+{
+	if (resourceAbsoluteToDeckPathMap.empty()) return;
+	verify (!(mediaDirectoryName.isEmpty() || mediaDirectoryName.isNull()), "Media directory not specified or empty.");
+
+	QDir createMediaIn = QFileInfo (deckFileName).dir();
+	verify (createMediaIn.exists(), "Failed to access parent directory of '" + deckFileName + "'.");
+
+	verify (createMediaIn.mkpath (mediaDirectoryName), "Failed to create media subdirectory '" + mediaDirectoryName + "' for deck file '" + deckFileName +"'.");
+
+	for (std::pair <QString, QString> absoluteToRelative : resourceAbsoluteToDeckPathMap.toStdMap())
+	{
+		QString destination = createMediaIn.absolutePath() + "/" + mediaDirectoryName + "/" + absoluteToRelative.second;
+
+		QFileInfo sourceFile (absoluteToRelative.first), destinationFile (destination);
+		if (destinationFile.exists() && sourceFile.lastModified() == destinationFile.lastModified())
+		{
+			if (verbose)
+				qstderr << "File '" << absoluteToRelative.first << "' has same last accessed time as '" << destination << "': skipping." << endl;
+			continue;
+		}
+
+		//bool copied = QFile::copy (absoluteToRelative.first, destination);
+
+		// Copy preserving timestamps via 'cp'
+		bool copied = false;
+
+#ifdef  Q_OS_LINUX
+		QProcess process;
+		process.start ("cp", QStringList() << sourceFile.absoluteFilePath() << destinationFile.absoluteFilePath() << "--preserve=timestamps");
+		verify (process.waitForFinished(), "Failed to wait for 'cp' to finish.");
+		copied = process.exitCode() == 0;
+#else
+#error This platform is not supported. Add more cases or test if the existing code works.
+#endif
+
+		verify (copied, "Failed to copy '" + absoluteToRelative.first + "' to '" + destination + "'.");
+
+		if (verbose)
+			qstderr << "Copied resource '" + absoluteToRelative.first + "' to '" + destination + "'." << endl;
+	}
+	if (verbose)
+		qstderr << resourceAbsoluteToDeckPathMap.size() << " resources saved." << endl;
+}
+
 void DatabaseExporter::exportDatabase (HistoricalDeck* exportTo, HistoricalEventExportMode eventExportMode, HistoricalTermExportMode termExportMode)
 {
 	this->eventExportMode = eventExportMode;
@@ -122,11 +188,6 @@ void DatabaseExporter::exportDatabase (HistoricalDeck* exportTo, HistoricalEvent
 
 	for (shared_ptr <HistoricalEntry> e: database->entries)
 		exportEntry (exportTo, e.get());
-}
-
-QString surroundPreamble (QString preamble)
-{
-	return "<i><color #666666>" + preamble + "</i></color>";
 }
 
 QString stringToFlashcardsFormat (QString string)
@@ -173,7 +234,7 @@ void DatabaseExporter::exportEntry (HistoricalDeck* exportTo, HistoricalEntry* e
 
 		QString preamble = variableValue (preambleMiddle.replace ("date", event->date.end.isSpecified() ? "complex_date" : "simple_date") + "_preamble", entry);
 		if (!preamble.isEmpty())
-			cardFront += surroundPreamble ("\n(" + preamble + ")");
+			cardFront += preamble;
 	}
 	else if (HistoricalTerm* term = dynamic_cast <HistoricalTerm*> (entry))
 	{
@@ -182,7 +243,7 @@ void DatabaseExporter::exportEntry (HistoricalDeck* exportTo, HistoricalEntry* e
 			cardFront = term->termName;
 			QString preamble = variableValue ("term_to_definition_preamble", entry);
 			if (!preamble.isEmpty())
-				cardFront += surroundPreamble ("\n(" + preamble + ")");
+				cardFront += preamble;
 
 			cardBack = term->termDefinition;
 		}
@@ -191,7 +252,7 @@ void DatabaseExporter::exportEntry (HistoricalDeck* exportTo, HistoricalEntry* e
 			cardFront = term->inverseQuestion;
 			QString preamble = variableValue ("definition_to_term_preamble", entry);
 			if (!preamble.isEmpty())
-				cardFront += surroundPreamble ("\n(" + preamble + ")");
+				cardFront += preamble;
 
 			cardBack = term->termName;
 		}
@@ -201,6 +262,16 @@ void DatabaseExporter::exportEntry (HistoricalDeck* exportTo, HistoricalEntry* e
 	{
 		cardFront = question->question;
 		cardBack = question->answer;
+
+		QString image = entry->variableStack.getVariableValue ("image");
+		//entry->variableStack.stack->dump();
+		if (!image.isNull())
+		{
+			if (booleanVariableValue ("question_front_use_image", entry))
+				exportTo->setColumnValue ("Picture 1", exportTo->getResourceDeckPath (image));
+			if (booleanVariableValue ("question_back_use_image", entry))
+				exportTo->setColumnValue ("Picture 2", exportTo->getResourceDeckPath (image));
+		}
 	}
 	else
 	{
@@ -249,4 +320,11 @@ QString DatabaseExporter::variableValue (QString name, HistoricalEntry* entry)
 	QString value = entry->variableStack.getVariableValue (name);
 	verify (!value.isNull(), "Variable '" + name + "' not defined (required by exporter).");
 	return value;
+}
+
+bool DatabaseExporter::booleanVariableValue (QString name, HistoricalEntry* entry)
+{
+	QString value = variableValue (name, entry);
+	verify (value == "true" || value == "false", "Variable '" + name + "' has non-boolean value '" + value + "'.");
+	return value == "true";
 }

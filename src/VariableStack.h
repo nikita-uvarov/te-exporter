@@ -34,7 +34,10 @@ public :
 
 	VariableStackState currentState();
 
+	void dump();
+
 private :
+	QVector <QString> stackVariables;
 	QMap < QString, QVector <QString> > currentStackState;
 	QMap < QString, QVector < QPair <int, QString> > > variableNameToVersionPairs;
 	int currentVersion;

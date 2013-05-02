@@ -11,3 +11,5 @@
 #push month_10_output: октября Октябрь
 #push month_11_output: ноября Ноябрь
 #push month_12_output: декабря Декабрь
+
+// kate: syntax ActionScript 2.0;

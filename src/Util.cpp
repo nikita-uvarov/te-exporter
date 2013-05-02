@@ -83,7 +83,7 @@ QString FileReaderSingletone::expandPathMacros (QString path)
 	return path;
 }
 
-QPair <QString, QString> FileReaderSingletone::readContents (QString fileName, QString context)
+QString FileReaderSingletone::getAbsolutePath (QString fileName, QString context)
 {
 	fileName = expandPathMacros (fileName);
 	QString resultingPath = "";
@@ -114,6 +114,12 @@ QPair <QString, QString> FileReaderSingletone::readContents (QString fileName, Q
 	}
 
 	verify (resultingPath != "", "File '" + fileName + "' could not be found in search locations for context '" + context + "' (searched " + searched + ").");
+	return resultingPath;
+}
+
+QPair <QString, QString> FileReaderSingletone::readContents (QString fileName, QString context)
+{
+	QString resultingPath = getAbsolutePath (fileName, context);
 
 	QFile file (resultingPath);
 	assert (file.exists(), "File '" + resultingPath + "' could not be opened.");

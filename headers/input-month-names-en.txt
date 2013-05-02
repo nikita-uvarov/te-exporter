@@ -10,3 +10,5 @@
 #push month_10_input_variants: $month_10_input_variants  october oct
 #push month_11_input_variants: $month_11_input_variants  november nov
 #push month_12_input_variants: $month_12_input_variants  december dec
+
+// kate: syntax ActionScript 2.0;

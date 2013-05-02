@@ -1,3 +1,18 @@
-[themec]
+[themea]
+
+// Amazing #push_replacement command allows to use regexps to create own TeX-like constructions that would transform into corresponding html tags.
+// Recommended cards font: Georgia.
+
+
+[themea]
 
 15.11.15 - Wazzup
+
+#push question_front_use_image: true
+#push question_back_use_image: false
+#image images/watermelon.jpg
+What's on the picture?
+A watermelon
+#pop
+#pop
+#pop

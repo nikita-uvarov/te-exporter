@@ -97,6 +97,7 @@ public :
 	QVector < shared_ptr <HistoricalEntry> > entries;
 
 	shared_ptr <VariableStack> variableStack;
+	QVector < QPair <QString, QString> > replacements;
 
 	HistoricalDatabase (shared_ptr <VariableStack> variableStack) :
 		variableStack (variableStack)
@@ -136,6 +137,8 @@ private :
 	void processDirective (QString directive, shared_ptr <HistoricalDatabase> database);
 
 	void updateMonthNames();
+
+	QString applyReplacements (QString str);
 };
 
 #endif // HISTORICAL_DATABASE_H

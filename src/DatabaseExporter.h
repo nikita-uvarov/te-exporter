@@ -16,8 +16,12 @@ public :
 	void submitRow();
 
 	void writeDeck (QTextStream& stream);
+	void saveResources (QString deckFileName, bool verbose = false);
 
 	void removeDuplicates();
+
+	void setMediaDirectoryName (QString name);
+	QString getResourceDeckPath (QString resourceAbsolutePath);
 
 private :
 
@@ -26,6 +30,9 @@ private :
 	std::vector <QString> usedColumns;
 	std::vector < std::map <int, QString> > exportData;
 	std::map <int, QString> currentRow;
+
+	QString mediaDirectoryName;
+	QMap <QString, QString> resourceAbsoluteToDeckPathMap;
 };
 
 enum class HistoricalEventExportMode
@@ -64,6 +71,7 @@ private :
 	QString simpleDateToStringLocalized (SimpleDate date, HistoricalEntry* entry);
 
 	QString variableValue (QString name, HistoricalEntry* entry);
+	bool booleanVariableValue (QString name, HistoricalEntry* entry);
 };
 
 #endif // DATABASE_EXPORTER_H
