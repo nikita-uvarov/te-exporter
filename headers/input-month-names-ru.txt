@@ -1,0 +1,12 @@
+#push month_01_input_variants: $month_01_input_variants  январь января
+#push month_02_input_variants: $month_02_input_variants  февраль февраля
+#push month_03_input_variants: $month_03_input_variants  март марта
+#push month_04_input_variants: $month_04_input_variants  апрель апреля
+#push month_05_input_variants: $month_05_input_variants  май мая
+#push month_06_input_variants: $month_06_input_variants  июнь июня
+#push month_07_input_variants: $month_07_input_variants  июль июля
+#push month_08_input_variants: $month_08_input_variants  август августа
+#push month_09_input_variants: $month_09_input_variants  сентябрь сентября
+#push month_10_input_variants: $month_10_input_variants  октябрь октября
+#push month_11_input_variants: $month_11_input_variants  ноябрь ноября
+#push month_12_input_variants: $month_12_input_variants  декабрь декабря

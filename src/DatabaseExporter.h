@@ -44,8 +44,8 @@ enum class HistoricalTermExportMode
 class DatabaseExporter
 {
 public :
-	DatabaseExporter (HistoricalDatabase* database, LocalizationSettings* localization) :
-		database (database), localization (localization), localizationSettingsRead (false)
+	DatabaseExporter (HistoricalDatabase* database) :
+		database (database)
 	{}
 
 	void printMessages();
@@ -58,17 +58,12 @@ private :
 	HistoricalEventExportMode eventExportMode;
 	HistoricalTermExportMode termExportMode;
 
-	LocalizationSettings* localization;
-
-	bool localizationSettingsRead;
-	QString fullDateMonthNames[12], partialDateMonthNames[12];
-
 	void exportEntry (HistoricalDeck* exportTo, HistoricalEntry* entry);
 
-	QString complexDateToStringLocalized (ComplexDate date);
-	QString simpleDateToStringLocalized (SimpleDate date);
+	QString complexDateToStringLocalized (ComplexDate date, HistoricalEntry* entry);
+	QString simpleDateToStringLocalized (SimpleDate date, HistoricalEntry* entry);
 
-	void readLocalizationSettings();
+	QString variableValue (QString name, HistoricalEntry* entry);
 };
 
 #endif // DATABASE_EXPORTER_H

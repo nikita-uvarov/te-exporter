@@ -13,13 +13,15 @@ set(te-exporter-sources
 	src/DatabaseExporter.cpp
 	src/Util.cpp
 	src/SceneryExecutor.cpp
+	src/VariableStack.cpp
 	src/main.cpp)
 
 set(te-exporter-headers
 	src/DatabaseExporter.h
 	src/HistoricalDatabase.h
 	src/Util.h
-	src/SceneryExecutor.h)
+	src/SceneryExecutor.h
+	src/VariableStack.h)
 
 qt4_wrap_cpp(moc-outfiles ${te-exporter-headers})
 

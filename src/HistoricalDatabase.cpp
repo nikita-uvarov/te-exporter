@@ -2,16 +2,12 @@
 
 #include <QString>
 #include <QStringList>
+#include <QFileInfo>
+
+const char* DATABASE_INCLUDE_DIRECTORIES_CONTEXT = "database-include-directories";
 
 HistoricalEntry::~HistoricalEntry()
 {}
-
-HistoricalDatabase::~HistoricalDatabase()
-{
-	for (HistoricalEntry* e: entries)
-		delete e;
-	entries.clear();
-}
 
 QTextStream& operator<< (QTextStream& stream, const SimpleDate& date)
 {
@@ -99,11 +95,16 @@ void DatabaseParser::blockParseError (int blockLine, QString what)
 	throw DatabaseParserException();
 }
 
-void DatabaseParser::parseMonthNames (LocalizationSettings* settings)
+void DatabaseParser::updateMonthNames()
 {
+	obsoleteMonthNames = false;
 	for (unsigned i = 1; i <= 12; i++)
 	{
-		QString variants = settings->getLocalizedString (QString ("month_") + (i < 10 ? "0" : "") + QString::number (i) + "_output");
+		QString variableName = QString ("month_") + (i < 10 ? "0" : "") + QString::number (i) + "_input_variants";
+		QString variants = currentDatabase->variableStack->currentState().getVariableValue (variableName);
+		if (variants.isNull())
+			blockParseError (0, "Failed to start parsing block: variants for month " + QString::number (i) + " missing ('" + variableName + "' not defined).");
+
 		QStringList monthNames = variants.split (' ', QString::SkipEmptyParts);
 		assert (!monthNames.empty(), "Every month must have at least one name: missing month " + QString::number(i + 1));
 
@@ -114,6 +115,9 @@ void DatabaseParser::parseMonthNames (LocalizationSettings* settings)
 
 bool DatabaseParser::tryExtractSimpleDate (QString& line, SimpleDate& date)
 {
+	if (obsoleteMonthNames)
+		updateMonthNames();
+
 	QStringList monthes = monthNameToIndex.keys();
 	QString monthesMatch = "";
 	for (QString monthName: monthes)
@@ -254,7 +258,9 @@ void DatabaseParser::processCurrentBlock()
 			}
 
 			entryIndexToLine[currentDatabase->entries.size()] = currentBlockFirstLine;
-			currentDatabase->entries.push_back (new HistoricalEvent (date, currentEntryTag, replaceEscapes (firstLine), replaceEscapes (eventDescription.trimmed())));
+			currentDatabase->entries.push_back (
+				shared_ptr <HistoricalEntry> (new HistoricalEvent (date, currentEntryTag, currentDatabase->variableStack->currentState(),
+																   replaceEscapes (firstLine), replaceEscapes (eventDescription.trimmed()))));
 
 			// Resolve forward dates
 			for (unsigned i = 0; i < forwardDateEntriesIndices.size(); i++)
@@ -332,8 +338,9 @@ void DatabaseParser::processCurrentBlock()
 			}
 
 			entryIndexToLine[currentDatabase->entries.size()] = currentBlockFirstLine;
-			currentDatabase->entries.push_back (new HistoricalTerm (forwardDate ? ComplexDate() : lastDate, currentEntryTag,
-																	replaceEscapes (beforeDash), replaceEscapes (afterDash), replaceEscapes (inverseQuestion.trimmed())));
+			currentDatabase->entries.push_back
+				(shared_ptr <HistoricalEntry> (new HistoricalTerm (forwardDate ? ComplexDate() : lastDate, currentEntryTag, currentDatabase->variableStack->currentState(),
+				                               replaceEscapes (beforeDash), replaceEscapes (afterDash), replaceEscapes (inverseQuestion.trimmed()))));
 
 			if (forwardDate)
 				forwardDateEntriesIndices.push_back ((int)currentDatabase->entries.size() - 1);
@@ -365,8 +372,9 @@ void DatabaseParser::processCurrentBlock()
 			blockParseWarning (0, QString ("Question ends in unescaped '") + firstLine[firstLine.length() - 1] + "'.");
 
 		entryIndexToLine[currentDatabase->entries.size()] = currentBlockFirstLine;
-		currentDatabase->entries.push_back (new HistoricalQuestion (forwardDate ? ComplexDate() : lastDate, currentEntryTag,
-																    replaceEscapes (firstLine), answer));
+		currentDatabase->entries.push_back
+			(shared_ptr <HistoricalEntry> (new HistoricalQuestion (forwardDate ? ComplexDate() : lastDate, currentEntryTag, currentDatabase->variableStack->currentState(),
+																   replaceEscapes (firstLine), answer)));
 
 		if (forwardDate)
 			forwardDateEntriesIndices.push_back ((int)currentDatabase->entries.size() - 1);
@@ -375,10 +383,73 @@ void DatabaseParser::processCurrentBlock()
 	}
 }
 
-shared_ptr <HistoricalDatabase> DatabaseParser::parseDatabase (QString fileName, const QString& fileContents)
+void DatabaseParser::processDirective (QString directive, shared_ptr <HistoricalDatabase> database)
 {
-	shared_ptr <HistoricalDatabase> database (new HistoricalDatabase);
-	currentDatabase = database.get();
+	const QString includeDirectivePrefix = "#include ",
+				  pushDirectivePrefix = "#push",
+				  popDirectivePrefix = "#pop";
+
+	if (directive.startsWith (includeDirectivePrefix))
+	{
+		QString includePath = directive.right (directive.length() - includeDirectivePrefix.length());
+		shared_ptr <DatabaseParser> subParser (new DatabaseParser);
+		QPair <QString, QString> contentsNamePair = FileReaderSingletone::instance().readContents (includePath, DATABASE_INCLUDE_DIRECTORIES_CONTEXT);
+		subParser->parseDatabase (contentsNamePair.second, contentsNamePair.first, database);
+	}
+	else if (directive.startsWith (pushDirectivePrefix))
+	{
+		directive = directive.right (directive.length() - pushDirectivePrefix.length());
+
+		QString name = "", value = "";
+
+		int valueColonIndex = directive.indexOf (':');
+		if (valueColonIndex != -1)
+		{
+			if (directive.length() <= valueColonIndex + 1 || directive[valueColonIndex + 1] != ' ')
+				blockParseError (0, "Space expected after a colon in a variable push directive.");
+
+			name = directive.left (valueColonIndex).trimmed();
+			value = directive.right (directive.length() - valueColonIndex - 2);
+		}
+		else
+		{
+			name = directive.trimmed();
+		}
+
+		if (name.isEmpty())
+			blockParseError (0, "Variable name is empty.");
+
+		for (QChar c: name)
+			if (!c.isLetterOrNumber() && c != '_')
+				blockParseError (0, QString ("Invalid character '") + c + "' in variable name '" + name + "'.");
+
+		//qstderr << "Push variable '" << name << "' with value '" << value << "'" << endl;
+		currentDatabase->variableStack->pushVariable (name, value);
+
+		if (name.startsWith ("month_") && name.endsWith ("_input_variants"))
+			obsoleteMonthNames = true;
+	}
+	else if (directive.startsWith (popDirectivePrefix))
+	{
+		directive = directive.right (directive.length() - popDirectivePrefix.length()).trimmed();
+
+		if (!currentDatabase->variableStack->popVariable (directive))
+			blockParseError (0, directive.isEmpty() ? "Failed to pop variable: the stack is empty." : "Failed to pop variable '" + directive + "': not found on stack.");
+	}
+	else
+	{
+		blockParseError (0, "Unknown directive: '" + directive + "'.");
+	}
+}
+
+shared_ptr <HistoricalDatabase> DatabaseParser::parseDatabase (QString fileName, const QString& fileContents, shared_ptr <HistoricalDatabase> appendTo)
+{
+	if (!appendTo)
+		appendTo.reset (new HistoricalDatabase (shared_ptr <VariableStack> (new VariableStack)));
+
+	currentDatabase = appendTo.get();
+
+	int currentDirectoryPushId = FileReaderSingletone::instance().pushFileSearchPath (QFileInfo (fileName).absolutePath(), DATABASE_INCLUDE_DIRECTORIES_CONTEXT);
 
 	QStringList lines = fileContents.split ('\n');
 
@@ -388,7 +459,9 @@ shared_ptr <HistoricalDatabase> DatabaseParser::parseDatabase (QString fileName,
 
 	forwardDate = true;
 	forwardDateEntriesIndices.clear();
-//
+
+	obsoleteMonthNames = true;
+	
 	bool cPlusPlusCommentOpen = false;
 
 	for (int lineNumber = 0; lineNumber < lines.size(); lineNumber++)
@@ -400,13 +473,24 @@ shared_ptr <HistoricalDatabase> DatabaseParser::parseDatabase (QString fileName,
 			int commentClosing = line.indexOf ("*/");
 			if (commentClosing != -1)
 			{
-				line = line.right (line.size() - commentClosing - 1);
+				line = line.right (line.size() - commentClosing - 2);
 				cPlusPlusCommentOpen = false;
 			}
 			else
 			{
 				line = "";
 			}
+		}
+
+		if (!line.isEmpty() && line[0] == '#')
+		{
+			currentBlockFirstLine = lineNumber + 1;
+			try
+			{
+				processDirective (line, appendTo);
+			}
+			catch (DatabaseParserException&) {}
+			line = "";
 		}
 
 		int lineCommentOpening = line.indexOf ("//");
@@ -425,12 +509,15 @@ shared_ptr <HistoricalDatabase> DatabaseParser::parseDatabase (QString fileName,
 		line = line.trimmed();
 
 		if (!line.isEmpty())
+		{
+			if (currentBlock.isEmpty())
+				currentBlockFirstLine = lineNumber + 1;
+
 			currentBlock.push_back (line);
+		}
 
 		if ((line.isEmpty() || lineNumber + 1 == lines.size()) && !currentBlock.empty())
 		{
-			currentBlockFirstLine = lineNumber + 1;
-
 			try
 			{
 				processCurrentBlock();
@@ -449,5 +536,7 @@ shared_ptr <HistoricalDatabase> DatabaseParser::parseDatabase (QString fileName,
 																  "Failed to assign a date to a dateless entry."));
 	}
 
-	return database;
+	FileReaderSingletone::instance().popFileSearchPath (currentDirectoryPushId);
+	currentDatabase = nullptr;
+	return appendTo;
 }

@@ -1,6 +1,6 @@
 # Comments like in bash
 
-load_localization -path "../configs/localization.txt"
+#load_localization -path "../configs/localization.txt"
 
 load -db "db" -path "../databases/test.txt" # Paths relative to scenery
 

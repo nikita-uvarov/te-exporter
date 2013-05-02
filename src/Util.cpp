@@ -5,6 +5,8 @@
 #include <QString>
 #include <QStringList>
 #include <QFile>
+#include <QFileInfo>
+#include <QDir>
 
 QTextStream qstdin, qstdout, qstderr;
 QFile stdinFile, stdoutFile, stderrFile;
@@ -60,45 +62,71 @@ bool FileLocationMessage::operator< (const FileLocationMessage& other) const
 	return false;
 }
 
-QString readContents (QString fileName)
+int FileReaderSingletone::pushFileSearchPath (QString fileName, QString context)
 {
-	QFile file (fileName);
-	assert (file.exists(), "File '" + file.fileName() + "' could not be opened");
+	includePaths.push_back (QPair <QString, QString> (fileName, context));
+	return includePaths.size();
+}
+
+void FileReaderSingletone::popFileSearchPath (int pushId)
+{
+	verify (pushId > 0, "Non-positive push id: " + QString::number (pushId));
+	verify (includePaths.size() == pushId, "Path search stack push/pop mismatch (size is " + QString::number (includePaths.size()) + ", pop " + QString::number (pushId) + " requested).");
+	includePaths.pop_back();
+}
+
+QString FileReaderSingletone::expandPathMacros (QString path)
+{
+	if (!path.isEmpty() && path[0] == '~')
+		path = QDir::homePath() + path.right (path.length() - 1);
+
+	return path;
+}
+
+QPair <QString, QString> FileReaderSingletone::readContents (QString fileName, QString context)
+{
+	fileName = expandPathMacros (fileName);
+	QString resultingPath = "";
+
+	QString searched = "";
+
+	QFileInfo pathInfo (fileName);
+	if (pathInfo.isAbsolute())
+	{
+		resultingPath = pathInfo.absoluteFilePath();
+	}
+	else
+	{
+		for (int i = includePaths.size() - 1; i >= 0; i--)
+			if (includePaths[i].second == context)
+			{
+				QDir includeDirectory (includePaths[i].first);
+				if (includeDirectory.exists())
+				{
+					if (!searched.isEmpty()) searched += ", ";
+					searched += "'" + includeDirectory.absolutePath() + "'";
+					resultingPath = includeDirectory.filePath (fileName);
+					if (QFile (resultingPath).exists())
+						break;
+					resultingPath = "";
+				}
+			}
+	}
+
+	verify (resultingPath != "", "File '" + fileName + "' could not be found in search locations for context '" + context + "' (searched " + searched + ").");
+
+	QFile file (resultingPath);
+	assert (file.exists(), "File '" + resultingPath + "' could not be opened.");
 
 	file.open (QIODevice::ReadOnly | QIODevice::Text);
 	QByteArray fileContents = file.readAll();
 	file.close();
 
-	return QString::fromUtf8 (fileContents);
+	return QPair <QString, QString> (QString::fromUtf8 (fileContents), QFileInfo (resultingPath).absoluteFilePath());
 }
 
-const QString& LocalizationSettings::getLocalizedString(const QString& key)
+FileReaderSingletone& FileReaderSingletone::instance()
 {
-	verify (strings.count (key) > 0, "String not found in localization file: '" + key + "'.");
-	return strings[key];
-}
-
-void LocalizationSettings::parse (QString contents)
-{
-	QStringList lines = contents.split ('\n');
-
-	for (unsigned int i = 0; i < lines.size(); i++)
-	{
-		QString line = lines[i];
-		int commentBeginning = line.indexOf ('#');
-		if (commentBeginning != -1)
-			line = line.left (commentBeginning);
-		line = line.trimmed();
-
-		if (line.isEmpty()) continue;
-
-		QRegExp lineFormat ("^([a-z0-9A-Z_]+)=\"([^\"]*)\"$");
-		if (lineFormat.indexIn (line) == -1)
-			failure ("Localization settings file: invalid line " + QString::number (i + 1) + " format.");
-
-		QString key = lineFormat.cap (1), value = lineFormat.cap (2);
-		verify (strings.count (key) == 0, "Duplicate key '" + key + "' in localization file.");
-
-		strings[key] = value;
-	}
+	static FileReaderSingletone single;
+	return single;
 }

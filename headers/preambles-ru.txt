@@ -1,0 +1,11 @@
+// A preamble is usually a gray text in parentheses after the main question part
+#push simple_date_to_name_preamble: название события
+#push complex_date_to_name_preamble: название периода
+#push name_to_simple_date_preamble: дата
+#push name_to_complex_date_preamble: временные рамки
+#push name_to_simple_date_and_definition_preamble: дата, описание
+#push name_to_complex_date_and_definition_preamble: временные рамки, описание
+
+#push term_to_definition_preamble: определение термина
+#push definition_to_term_preamble: название термина
+

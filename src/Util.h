@@ -3,6 +3,7 @@
 
 #include <QString>
 #include <QTextStream>
+#include <QVector>
 
 /* Standard streams wrappers */
 
@@ -53,18 +54,23 @@ public :
 	bool operator< (const FileLocationMessage& other) const;
 };
 
-QString readContents (QString fileName);
-
-/* By-hand localization support */
-
-class LocalizationSettings
+class FileReaderSingletone
 {
 public :
-	void parse (QString contents);
-	const QString& getLocalizedString (const QString& key);
+	int pushFileSearchPath (QString fileName, QString context);
+	void popFileSearchPath (int pushId);
 
+	// Returns contents & absolute resulting file path
+	QPair <QString, QString> readContents (QString fileName, QString context);
+
+	QString expandPathMacros (QString path);
+
+	static FileReaderSingletone& instance();
 private :
-	QMap <QString, QString> strings;
+	QVector < QPair <QString, QString> > includePaths;
+
+	FileReaderSingletone() {}
+	FileReaderSingletone (const FileReaderSingletone&) = delete;
 };
 
 #endif // UTIL_H

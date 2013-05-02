@@ -1,0 +1,11 @@
+#include input-month-names-en.txt
+#include input-month-names-ru.txt
+#include output-month-names-ru.txt
+#include preambles-ru.txt
+
+/*[themea]
+
+41.11.2323 - Some event
+
+Test entry?
+Wooohooo...*/

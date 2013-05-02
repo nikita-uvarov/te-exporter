@@ -1,0 +1,12 @@
+#push month_01_input_variants: $month_01_input_variants  january jan
+#push month_02_input_variants: $month_02_input_variants  february feb
+#push month_03_input_variants: $month_03_input_variants  march mar
+#push month_04_input_variants: $month_04_input_variants  april apr
+#push month_05_input_variants: $month_05_input_variants  may may
+#push month_06_input_variants: $month_06_input_variants  june jun
+#push month_07_input_variants: $month_07_input_variants  july jul
+#push month_08_input_variants: $month_08_input_variants  august aug
+#push month_09_input_variants: $month_09_input_variants  september sep
+#push month_10_input_variants: $month_10_input_variants  october oct
+#push month_11_input_variants: $month_11_input_variants  november nov
+#push month_12_input_variants: $month_12_input_variants  december dec

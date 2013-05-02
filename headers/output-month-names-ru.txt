@@ -1,0 +1,13 @@
+// First form used for full dates (with day specified), second for month-year only
+#push month_01_output: января Январь
+#push month_02_output: февраля Февраль
+#push month_03_output: марта Март
+#push month_04_output: апреля Апрель
+#push month_05_output: мая Май
+#push month_06_output: июня Июнь
+#push month_07_output: июля Июль
+#push month_08_output: августа Август
+#push month_09_output: сентября Сентябрь
+#push month_10_output: октября Октябрь
+#push month_11_output: ноября Ноябрь
+#push month_12_output: декабря Декабрь

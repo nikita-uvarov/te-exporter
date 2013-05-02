@@ -7,11 +7,14 @@
 #include <QMap>
 
 #include "Util.h"
+#include "VariableStack.h"
 
 using std::shared_ptr;
 
 const int SIMPLE_DATE_UNSPECIFIED = -1,
 		  SIMPLE_DATE_NOT_PARSED  = -2;
+
+extern const char* DATABASE_INCLUDE_DIRECTORIES_CONTEXT;
 
 struct SimpleDate
 {
@@ -42,9 +45,10 @@ class HistoricalEntry
 public :
 	ComplexDate date;
 	QString tag;
+	VariableStackState variableStack;
 
-	HistoricalEntry (ComplexDate date, QString tag) :
-		date (date), tag (tag)
+	HistoricalEntry (ComplexDate date, QString tag, VariableStackState state) :
+		date (date), tag (tag), variableStack (state)
 	{}
 
 	virtual ~HistoricalEntry();
@@ -55,9 +59,11 @@ class HistoricalEvent : public HistoricalEntry
 public :
 	QString eventName, eventDescription;
 
-	HistoricalEvent (ComplexDate date, QString tag, QString eventName, QString eventDescription) :
-		HistoricalEntry (date, tag), eventName (eventName), eventDescription (eventDescription)
+	HistoricalEvent (ComplexDate date, QString tag, VariableStackState state, QString eventName, QString eventDescription) :
+		HistoricalEntry (date, tag, state), eventName (eventName), eventDescription (eventDescription)
 	{}
+
+	~HistoricalEvent() {}
 };
 
 class HistoricalTerm : public HistoricalEntry
@@ -65,9 +71,11 @@ class HistoricalTerm : public HistoricalEntry
 public :
 	QString termName, termDefinition, inverseQuestion;
 
-	HistoricalTerm (ComplexDate date, QString tag, QString termName, QString termDefinition, QString inverseQuestion) :
-		HistoricalEntry (date, tag), termName (termName), termDefinition (termDefinition), inverseQuestion (inverseQuestion)
+	HistoricalTerm (ComplexDate date, QString tag, VariableStackState state, QString termName, QString termDefinition, QString inverseQuestion) :
+		HistoricalEntry (date, tag, state), termName (termName), termDefinition (termDefinition), inverseQuestion (inverseQuestion)
 	{}
+
+	~HistoricalTerm() {}
 };
 
 class HistoricalQuestion : public HistoricalEntry
@@ -75,18 +83,24 @@ class HistoricalQuestion : public HistoricalEntry
 public :
 	QString question, answer;
 
-	HistoricalQuestion (ComplexDate date, QString tag, QString question, QString answer) :
-		HistoricalEntry (date, tag), question (question), answer (answer)
+	HistoricalQuestion (ComplexDate date, QString tag, VariableStackState state, QString question, QString answer) :
+		HistoricalEntry (date, tag, state), question (question), answer (answer)
 	{}
+
+    ~HistoricalQuestion() {}
 };
 
 class HistoricalDatabase
 {
 public :
 	QVector <FileLocationMessage> messages;
-	QVector <HistoricalEntry*> entries;
+	QVector < shared_ptr <HistoricalEntry> > entries;
 
-	~HistoricalDatabase();
+	shared_ptr <VariableStack> variableStack;
+
+	HistoricalDatabase (shared_ptr <VariableStack> variableStack) :
+		variableStack (variableStack)
+	{}
 };
 
 bool isEndingSymbol (QChar c);
@@ -95,10 +109,10 @@ QString replaceEscapes (QString s);
 class DatabaseParser
 {
 public :
-	void parseMonthNames (LocalizationSettings* settings);
-	shared_ptr <HistoricalDatabase> parseDatabase (QString fileName, const QString& fileContents);
+	shared_ptr <HistoricalDatabase> parseDatabase (QString fileName, const QString& fileContents, shared_ptr <HistoricalDatabase> appendTo);
 
 private :
+	bool obsoleteMonthNames;
 	QMap <QString, int> monthNameToIndex;
 
 	HistoricalDatabase* currentDatabase;
@@ -118,6 +132,10 @@ private :
 
 	void blockParseError (int blockLine, QString what);
 	void blockParseWarning (int blockLine, QString what);
+
+	void processDirective (QString directive, shared_ptr <HistoricalDatabase> database);
+
+	void updateMonthNames();
 };
 
 #endif // HISTORICAL_DATABASE_H

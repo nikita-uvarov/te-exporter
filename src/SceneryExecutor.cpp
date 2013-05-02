@@ -122,41 +122,33 @@ void SceneryExecutor::execute()
 	}
 }
 
-QString expandPathMacros (QString path)
-{
-	if (path[0] == '~')
-		path = QDir::homePath() + path.right (path.length() - 1);
-
-	return path;
-}
-
 void SceneryExecutor::executeCommand (SceneryCommand& cmd)
 {
-	if (cmd.name == "load_localization")
+	/*if (cmd.name == "load_localization")
 	{
 		QString path = cmd.getArgument ("path");
-		QString contents = readContents (path);
+		QPair <QString, QString> contents = FileReaderSingletone::instance().readContents (path, "global");
 
 		localization.reset (new LocalizationSettings);
-		localization->parse (contents);
+		localization->parse (contents.first);
 	}
-	else if (cmd.name == "load")
-	{
-		if (!localization)
-			failure ("Unable to load database: localization settings not loaded.");
+	else */
 
-		QString dbName = cmd.getArgument ("db"), dbPath = expandPathMacros (cmd.getArgument ("path"));
+	if (cmd.name == "load")
+	{
+		QString dbName = cmd.getArgument ("db"), dbPath = cmd.getArgument ("path");
 		if (databases.count (dbName) > 0)
 			failure ("Duplicate database '" + dbName + "'.");
 
-		QString fileContents = readContents (dbPath);
+		QPair <QString, QString> fileContents = FileReaderSingletone::instance().readContents (dbPath, "global");
 
 		shared_ptr <DatabaseParser> parser (new DatabaseParser);
-		parser->parseMonthNames (localization.get());
-		shared_ptr <HistoricalDatabase> database = parser->parseDatabase (dbPath, fileContents);
 
-		shared_ptr <DatabaseExporter> exporter (new DatabaseExporter (database.get(), localization.get()));
+		QPair <QString, QString> globalHeaderContents = FileReaderSingletone::instance().readContents ("global.txt", DATABASE_INCLUDE_DIRECTORIES_CONTEXT);
+		shared_ptr <HistoricalDatabase> globalHeader = parser->parseDatabase (globalHeaderContents.second, globalHeaderContents.first, nullptr);
+		shared_ptr <HistoricalDatabase> database = parser->parseDatabase (fileContents.second, fileContents.first, globalHeader);
 
+		shared_ptr <DatabaseExporter> exporter (new DatabaseExporter (database.get()));
 
 		qstdout << "\nDatabase '" << dbName << "' loaded from '" << dbPath << "'.\n";
 		qstdout << "Parser messages:" << endl;
@@ -183,9 +175,6 @@ void SceneryExecutor::executeCommand (SceneryCommand& cmd)
 	}
 	else if (cmd.name == "export")
 	{
-		if (!localization)
-			failure ("Unable to export deck: localization settings not loaded.");
-
 		QString dbName = cmd.getArgument ("db"), deckName = cmd.getArgument ("deck");
 
 		if (databases.count (dbName) == 0)
@@ -215,26 +204,21 @@ void SceneryExecutor::executeCommand (SceneryCommand& cmd)
 		else
 			failure ("Unknown term export mode '" + termExportModeString + "'.");
 
-		shared_ptr <DatabaseExporter> exporter (new DatabaseExporter (databases[dbName].get(), localization.get()));
+		shared_ptr <DatabaseExporter> exporter (new DatabaseExporter (databases[dbName].get()));
 
 		qstdout << "Exporting database '" + dbName + "' to deck '" + deckName + "'." << endl;
 		exporter->exportDatabase (decks[deckName].get(), eventExportMode, termExportMode);
-
-		// TODO: Output messages
-		// TODO: Export switches
 	}
 	else if (cmd.name == "save")
 	{
-		if (!localization)
-			failure ("Unable to save decks: localization settings not loaded.");
-
-		QString deckName = cmd.getArgument ("deck"), fileName = expandPathMacros (cmd.getArgument ("path"));
+		QString deckName = cmd.getArgument ("deck"), fileName = cmd.getArgument ("path");
 
 		if (decks.count (deckName) == 0)
 			failure ("No deck '" + deckName + "' found.");
 
+		fileName = FileReaderSingletone::instance().expandPathMacros (fileName);
 		QFile exportTo (fileName);
-		exportTo.open (QIODevice::WriteOnly | QIODevice::Text);
+		verify (exportTo.open (QIODevice::WriteOnly | QIODevice::Text), "Failed to open save destination file '" + fileName + "'.");
 
 		QTextStream exportStream (&exportTo);
 
@@ -260,17 +244,17 @@ void SceneryExecutor::executeCommand (SceneryCommand& cmd)
 			failure ("Database '" + sourceDb + "' does not exist.");
 
 		if (databases.count (destinationDb) > 0)
-			failure ("Duplicate databse '" + destinationDb + "'.");
+			failure ("Duplicate database '" + destinationDb + "'.");
 
-		databases[destinationDb] = shared_ptr <HistoricalDatabase> (new HistoricalDatabase);
+		databases[destinationDb] = shared_ptr <HistoricalDatabase> (new HistoricalDatabase (databases[sourceDb]->variableStack));
 
-		QVector <HistoricalEntry*>& sourceEntries = databases[sourceDb]->entries,
-								  & destinationEntries = databases[destinationDb]->entries;
+		QVector <shared_ptr <HistoricalEntry> >& sourceEntries = databases[sourceDb]->entries,
+								               & destinationEntries = databases[destinationDb]->entries;
 
 		// More advanced filters are easy to implement, if really needed (probably date filter would be useless)
 		QString tagFilter = cmd.getArgument ("tag", "*");
 
-		for (HistoricalEntry* e: sourceEntries)
+		for (shared_ptr <HistoricalEntry> e: sourceEntries)
 		{
 			if (tagFilter != "*" && e->tag != tagFilter) continue;
 
