@@ -1,8 +1,9 @@
 [front-page]
 #push_replacement_DECKSTYLERECOMMENDATIONS__
 Колода экспортирована утилитой <b>te\-exporter</b>.\nНа обратной стороне есть инструкции по началу работы.
-- отключите эту карточку (<i>Меню карточки dash Exclude</i>).
-- выберите подходящий порядок карточек (например, <i>Настройки колоды dash Card Order dash Random</i>).
-- возможно, Вам захочется изменить размер шрифта по умолчанию (<i>Настройки колоды dash Font / Alignment dash Font size</i>)
+Перед началом работы:
+bullet отключите эту карточку (<i>Меню карточки dash Exclude</i>).
+bullet выберите подходящий порядок карточек (например, <i>Настройки колоды dash Card Order dash Random</i>).
+bullet возможно, Вам захочется изменить размер шрифта по умолчанию (<i>Настройки колоды dash Font / Alignment dash Font size</i>)
 DECKSTYLERECOMMENDATIONS
 #pop_replacement

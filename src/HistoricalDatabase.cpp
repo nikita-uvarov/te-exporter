@@ -388,7 +388,7 @@ void DatabaseParser::processDirective (QString directive, shared_ptr <Historical
 {
 	const QString includeDirectivePrefix = "#include ",
 				  pushDirectivePrefix = "#push ",
-				  popDirectivePrefix = "#pop ",
+				  popDirectivePrefix = "#pop",
 				  imageDirectivePrefix = "#image ",
 				  pushReplacementPrefix = "#push_replacement",
 				  popReplacementPrefix = "#pop_replacement";
@@ -433,7 +433,7 @@ void DatabaseParser::processDirective (QString directive, shared_ptr <Historical
 		if (name.startsWith ("month_") && name.endsWith ("_input_variants"))
 			obsoleteMonthNames = true;
 	}
-	else if (directive.startsWith (popDirectivePrefix))
+	else if (directive.startsWith (popDirectivePrefix) && !directive.startsWith (popReplacementPrefix))
 	{
 		directive = directive.right (directive.length() - popDirectivePrefix.length()).trimmed();
 

@@ -1,2 +1,2 @@
-#push preamble_style_opening: |<i><color #666666>(
-#push preamble_style_closing: )</color></i>
+#push preamble_style_opening: <size 12>|<i><color #666666>(
+#push preamble_style_closing: )</color></i></size>

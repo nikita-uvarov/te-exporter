@@ -13,8 +13,11 @@
 #push question_back_use_image: true
 #push question_front_use_image: false
 
+#push term_direct_back_use_image: true
+
 // Default replacements
 
 #push_replacement_dash_&mdash;_
+#push_replacement_bullet_&bull;_
 
 // kate: syntax ActionScript 2.0;

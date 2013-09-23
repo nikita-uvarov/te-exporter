@@ -1,12 +1,43 @@
-
 // Formula and power tags
-#push_replacement_'([^']*)'_<i><size 1.5>\1</size></i>_
-#push_replacement_\^([^\^]*)\^_<sup> \1</sup>_
+
+// Replace < and > related symbols prior to generating lots of tags
+#push_replacement_>=_&ge;_
+#push_replacement_<=_&le;_
+
+#push_replacement_^(.*)$_<size 12>\1</size></i>_
+#push_replacement_'([^']*)'_</size><i><size 20>\1</size></i><size 12>_
+#push_replacement_\^([^\^]*)\^_<sup>\1</sup>_
+#push_replacement$_([^_]*)_$<sub>\1</sub>$
 
 // Special symbols
 #push_replacement_nu_&#957;_
+#push_replacement_mu_&mu;_
+#push_replacement_epsilon_&epsilon;_
 #push_replacement_delta_&#916;_
+#push_replacement_alpha_&alpha;_
+#push_replacement_pi_&pi;_
+#push_replacement_phi_&phi;_
+#push_replacement_Phi_&Phi;_
+#push_replacement_Omega_&Omega;_
+#push_replacement_lambda_&lambda;_
+#push_replacement_rho_&rho;_
+#push_replacement_proportional_&sim;_
+#push_replacement_grad_&deg;_
+#push_replacement_sqrt_&radic;_
+#push_replacement_\.\.\._&hellip;_
+#push_replacement_Sigma_&sum;_
+#push_replacement_sigma_&sigma;_
+#push_replacement_follows_&#8658;_
+#push_replacement_prime_&prime;_
+#push_replacement_infinity_&infin;_
+#push_replacement_gamma_&gamma;_
+#push_replacement_limit_&rarr;_
+#push_replacement_vbar_&#124;_
+#push_replacement_vec_&#8407;_
+#push_replacement_prod_&#10799;_
 
-#push_replacement_DECKSTYLERECOMMENDATIONS_- Установите для колоды (<i>Настройки колоды dash Font / Alignment dash Font</i>) шрифт, отличный от стандартного (например, <i>Georgia</i>), чтобы спецсимволы выглядели нормально._
+#push_replacement_empty[.]?__
+
+#push_replacement_DECKSTYLERECOMMENDATIONS_&bull; Установите для колоды (<i>Настройки колоды &mdash; Font / Alignment &mdash; Font</i>) шрифт, отличный от стандартного (например, <i>Georgia</i>), чтобы спецсимволы выглядели нормально._
 
 // kate: syntax ActionScript 2.0;

@@ -151,7 +151,7 @@ void HistoricalDeck::saveResources (QString deckFileName, bool verbose)
 		QString destination = createMediaIn.absolutePath() + "/" + mediaDirectoryName + "/" + absoluteToRelative.second;
 
 		QFileInfo sourceFile (absoluteToRelative.first), destinationFile (destination);
-		if (destinationFile.exists() && sourceFile.lastModified() == destinationFile.lastModified())
+		if (destinationFile.exists() && sourceFile.lastModified() == destinationFile.lastModified() && sourceFile.size() == destinationFile.size())
 		{
 			if (verbose)
 				qstderr << "File '" << absoluteToRelative.first << "' has same last accessed time as '" << destination << "': skipping." << endl;
@@ -246,6 +246,13 @@ void DatabaseExporter::exportEntry (HistoricalDeck* exportTo, HistoricalEntry* e
 				cardFront += preamble;
 
 			cardBack = term->termDefinition;
+
+			QString image = entry->variableStack.getVariableValue ("image");
+			if (!image.isNull())
+			{
+				if (booleanVariableValue ("term_direct_back_use_image", entry))
+					exportTo->setColumnValue ("Picture 2", exportTo->getResourceDeckPath (image));
+			}
 		}
 		else if (termExportMode == HistoricalTermExportMode::INVERSE)
 		{
