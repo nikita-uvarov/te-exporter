@@ -1,9 +1,12 @@
 [front-page]
+#push parsers: question
 #push_replacement_DECKSTYLERECOMMENDATIONS__
-Колода экспортирована утилитой <b>te\-exporter</b>.\nНа обратной стороне есть инструкции по началу работы.
+#push_replacement_DECKTITLELINE__
+DECKTITLELINE\n<i>Колода экспортирована утилитой <b>te\-exporter</b>.</i>\n
 Перед началом работы:
 bullet отключите эту карточку (<i>Меню карточки dash Exclude</i>).
 bullet выберите подходящий порядок карточек (например, <i>Настройки колоды dash Card Order dash Random</i>).
 bullet возможно, Вам захочется изменить размер шрифта по умолчанию (<i>Настройки колоды dash Font / Alignment dash Font size</i>)
 DECKSTYLERECOMMENDATIONS
 #pop_replacement
+#pop parsers

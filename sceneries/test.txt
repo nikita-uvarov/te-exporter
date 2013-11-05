@@ -9,9 +9,9 @@ filter -source "db" -tag "themea" -destination "themea"
 filter -source "db" -tag "themeb" -destination "themeb"
 filter -source "db" -tag "themec" -destination "themec"
 
-export -db "front-page" -deck "test-deck" -event-export-mode "name-to-date-and-definition" -term-export-mode "inverse"
-export -db "themea" -deck "test-deck" -event-export-mode "name-to-date-and-definition" -term-export-mode "inverse"
-export -db "themec" -deck "test-deck" -event-export-mode "date-to-name" -term-export-mode "direct"
+export -db "front-page" -deck "test-deck" -set-history-event-export-mode "name-to-date-and-definition" -set-history-term-export-mode "inverse"
+export -db "themea" -deck "test-deck" -set-history-event-export-mode "name-to-date-and-definition" -set-history-term-export-mode "inverse"
+export -db "themec" -deck "test-deck" -set-history-event-export-mode "date-to-name" -set-history-term-export-mode "direct"
 
 remove_duplicates -deck "test-deck"
 

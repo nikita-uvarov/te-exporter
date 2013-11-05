@@ -1,14 +1,15 @@
 #ifndef DATABASE_EXPORTER_H
 #define DATABASE_EXPORTER_H
 
-#include "HistoricalDatabase.h"
+#include "FlashcardsDatabase.h"
+#include "FlashcardUtilities.h"
 
 #include <set>
 #include <map>
 #include <vector>
 #include <algorithm>
 
-class HistoricalDeck
+class FlashcardsDeck
 {
 public :
 
@@ -35,43 +36,27 @@ private :
 	QMap <QString, QString> resourceAbsoluteToDeckPathMap;
 };
 
-enum class HistoricalEventExportMode
-{
-	DATE_TO_NAME,
-	NAME_TO_DATE,
-	NAME_TO_DATE_AND_DEFINITION
-};
-
-enum class HistoricalTermExportMode
-{
-	DIRECT,
-	INVERSE
-};
-
 class DatabaseExporter
 {
 public :
-	DatabaseExporter (HistoricalDatabase* database) :
+	DatabaseExporter (FlashcardsDatabase* database) :
 		database (database)
 	{}
 
 	void printMessages();
 	void dump();
-	void exportDatabase (HistoricalDeck* exportTo, HistoricalEventExportMode eventExportMode, HistoricalTermExportMode termExportMode);
+	void exportDatabase (FlashcardsDeck* exportTo, VariableStackState exportArguments);
 
 private :
-	HistoricalDatabase* database;
+    FlashcardsDatabase* database;
 
-	HistoricalEventExportMode eventExportMode;
-	HistoricalTermExportMode termExportMode;
+    void exportEntry (FlashcardsDeck* exportTo, SimpleFlashcard* entry);
 
-	void exportEntry (HistoricalDeck* exportTo, HistoricalEntry* entry);
+    /*QString complexDateToStringLocalized (ComplexDate date, SimpleFlashcard* entry);
+    QString simpleDateToStringLocalized (SimpleDate date, SimpleFlashcard* entry);
 
-	QString complexDateToStringLocalized (ComplexDate date, HistoricalEntry* entry);
-	QString simpleDateToStringLocalized (SimpleDate date, HistoricalEntry* entry);
-
-	QString variableValue (QString name, HistoricalEntry* entry);
-	bool booleanVariableValue (QString name, HistoricalEntry* entry);
+    QString variableValue (QString name, SimpleFlashcard* entry);
+    bool booleanVariableValue (QString name, SimpleFlashcard* entry);*/
 };
 
 #endif // DATABASE_EXPORTER_H

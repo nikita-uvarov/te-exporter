@@ -40,31 +40,13 @@ void DatabaseExporter::printMessages()
 
 void DatabaseExporter::dump()
 {
-	for (shared_ptr <HistoricalEntry> e: database->entries)
+	for (shared_ptr <SimpleFlashcard> e: database->entries)
 	{
-		qstdout << "Tag: " << e->tag << ", date tag: " << e->date;
-
-		if (HistoricalEvent* event = dynamic_cast <HistoricalEvent*> (e.get()))
-		{
-			qstdout << ", event name: '" << event->eventName << "', description: '" << event->eventDescription << "'" << endl;
-		}
-		else if (HistoricalTerm* term = dynamic_cast <HistoricalTerm*> (e.get()))
-		{
-			qstdout << ", term name: '" << term->termName << "', definition: '" << term->termDefinition << "', inverse question: '" << term->inverseQuestion << "'" << endl;
-		}
-		else if (HistoricalQuestion* question = dynamic_cast <HistoricalQuestion*> (e.get()))
-		{
-			qstdout << ", question: '" << question->question << "', answer: '" << question->answer << "'" << endl;
-		}
-		else
-		{
-			qstdout << endl;
-			failure ("Failed to print entry: unknown entry type.");
-		}
+        e->dump (qstdout);
 	}
 }
 
-void HistoricalDeck::writeDeck (QTextStream& stream)
+void FlashcardsDeck::writeDeck (QTextStream& stream)
 {
 	stream.setCodec("UTF-8");
 
@@ -76,7 +58,7 @@ void HistoricalDeck::writeDeck (QTextStream& stream)
 			stream << row[i] << ((i + 1) == usedColumns.size() ? "\n" : "\t");
 }
 
-void HistoricalDeck::setColumnValue (QString columnName, QString columnValue)
+void FlashcardsDeck::setColumnValue (QString columnName, QString columnValue)
 {
 	int id = -1;
 	for (int i = 0; i < usedColumns.size(); i++)
@@ -95,13 +77,13 @@ void HistoricalDeck::setColumnValue (QString columnName, QString columnValue)
 	currentRow[id] = columnValue;
 }
 
-void HistoricalDeck::submitRow()
+void FlashcardsDeck::submitRow()
 {
 	exportData.push_back (currentRow);
 	currentRow.clear();
 }
 
-void HistoricalDeck::removeDuplicates()
+void FlashcardsDeck::removeDuplicates()
 {
 	// Could be done with unique, but don't mess up the ordering.
 
@@ -118,7 +100,7 @@ void HistoricalDeck::removeDuplicates()
 		}
 }
 
-QString HistoricalDeck::getResourceDeckPath (QString resourceAbsolutePath)
+QString FlashcardsDeck::getResourceDeckPath (QString resourceAbsolutePath)
 {
 	if (resourceAbsoluteToDeckPathMap.count (resourceAbsolutePath) > 0)
 		return resourceAbsoluteToDeckPathMap[resourceAbsolutePath];
@@ -131,12 +113,12 @@ QString HistoricalDeck::getResourceDeckPath (QString resourceAbsolutePath)
 	return newName;
 }
 
-void HistoricalDeck::setMediaDirectoryName (QString name)
+void FlashcardsDeck::setMediaDirectoryName (QString name)
 {
 	mediaDirectoryName = name;
 }
 
-void HistoricalDeck::saveResources (QString deckFileName, bool verbose)
+void FlashcardsDeck::saveResources (QString deckFileName, bool verbose)
 {
 	if (resourceAbsoluteToDeckPathMap.empty()) return;
 	verify (!(mediaDirectoryName.isEmpty() || mediaDirectoryName.isNull()), "Media directory not specified or empty.");
@@ -181,13 +163,14 @@ void HistoricalDeck::saveResources (QString deckFileName, bool verbose)
 		qstderr << resourceAbsoluteToDeckPathMap.size() << " resources saved." << endl;
 }
 
-void DatabaseExporter::exportDatabase (HistoricalDeck* exportTo, HistoricalEventExportMode eventExportMode, HistoricalTermExportMode termExportMode)
+void DatabaseExporter::exportDatabase (FlashcardsDeck* exportTo, VariableStackState exportArguments)
 {
-	this->eventExportMode = eventExportMode;
-	this->termExportMode = termExportMode;
-
-	for (shared_ptr <HistoricalEntry> e: database->entries)
+	for (shared_ptr <SimpleFlashcard> e: database->entries)
+    {
+        e->setFallbackVariableStackState (exportArguments);
 		exportEntry (exportTo, e.get());
+        e->removeFallbackVariableStackState();
+    }
 }
 
 QString stringToFlashcardsFormat (QString string)
@@ -195,114 +178,39 @@ QString stringToFlashcardsFormat (QString string)
 	return string.replace ('\n', '|').replace ('\t', "    ").replace (QRegExp ("`([^`])"), "\\1&#769;");
 }
 
-QString surroundDateHeader (QString dateHeader)
-{
-	return "<b>" + dateHeader + "</b>";
-}
-
-void DatabaseExporter::exportEntry (HistoricalDeck* exportTo, HistoricalEntry* entry)
+void DatabaseExporter::exportEntry (FlashcardsDeck* exportTo, SimpleFlashcard* entry)
 {
 	QString cardFront = "", cardBack = "";
 
-	if (HistoricalEvent* event = dynamic_cast <HistoricalEvent*> (entry))
-	{
-		QString preambleMiddle = "";
-
-		if (eventExportMode == HistoricalEventExportMode::DATE_TO_NAME)
-		{
-			cardFront = complexDateToStringLocalized (event->date, entry);
-			cardBack = event->eventName;
-
-			preambleMiddle = "date_to_name";
-		}
-		else if (eventExportMode == HistoricalEventExportMode::NAME_TO_DATE)
-		{
-			cardFront = event->eventName;
-			cardBack = complexDateToStringLocalized (event->date, entry);
-
-			preambleMiddle = "name_to_date";
-		}
-		else if (eventExportMode == HistoricalEventExportMode::NAME_TO_DATE_AND_DEFINITION)
-		{
-			cardFront = event->eventName;
-			QString dateHeader = complexDateToStringLocalized (event->date, entry) + (event->eventDescription.isEmpty() ? "" : ":\n");
-			cardBack = (event->eventDescription.isEmpty() ? dateHeader : surroundDateHeader (dateHeader) + event->eventDescription);
-
-			preambleMiddle = (event->eventDescription.isEmpty() ? "name_to_date" : "name_to_date_and_definition");
-		}
-		else failure ("Invalid event export mode.");
-
-		QString preamble = variableValue (preambleMiddle.replace ("date", event->date.end.isSpecified() ? "complex_date" : "simple_date") + "_preamble", entry);
-		if (!preamble.isEmpty())
-			cardFront += preamble;
-	}
-	else if (HistoricalTerm* term = dynamic_cast <HistoricalTerm*> (entry))
-	{
-		if (termExportMode == HistoricalTermExportMode::DIRECT)
-		{
-			cardFront = term->termName;
-			QString preamble = variableValue ("term_to_definition_preamble", entry);
-			if (!preamble.isEmpty())
-				cardFront += preamble;
-
-			cardBack = term->termDefinition;
-
-			QString image = entry->variableStack.getVariableValue ("image");
-			if (!image.isNull())
-			{
-				if (booleanVariableValue ("term_direct_back_use_image", entry))
-					exportTo->setColumnValue ("Picture 2", exportTo->getResourceDeckPath (image));
-			}
-		}
-		else if (termExportMode == HistoricalTermExportMode::INVERSE)
-		{
-			cardFront = term->inverseQuestion;
-			QString preamble = variableValue ("definition_to_term_preamble", entry);
-			if (!preamble.isEmpty())
-				cardFront += preamble;
-
-			cardBack = term->termName;
-		}
-		else failure ("Invalid term export mode.");
-	}
-	else if (HistoricalQuestion* question = dynamic_cast <HistoricalQuestion*> (entry))
-	{
-		cardFront = question->question;
-		cardBack = question->answer;
-
-		QString image = entry->variableStack.getVariableValue ("image");
-		//entry->variableStack.stack->dump();
-		if (!image.isNull())
-		{
-			if (booleanVariableValue ("question_front_use_image", entry))
-				exportTo->setColumnValue ("Picture 1", exportTo->getResourceDeckPath (image));
-			if (booleanVariableValue ("question_back_use_image", entry))
-				exportTo->setColumnValue ("Picture 2", exportTo->getResourceDeckPath (image));
-		}
-	}
-	else
-	{
-		failure ("Failed to export entry: unknown entry type.");
-	}
+    cardFront = entry->getFrontSide();
+    cardBack = entry->getBackSide();
 
 	cardFront = stringToFlashcardsFormat (cardFront);
 	cardBack = stringToFlashcardsFormat (cardBack);
 
 	exportTo->setColumnValue ("Text 1", cardFront);
 	exportTo->setColumnValue ("Text 2", cardBack);
+    
+    if (entry->thirdSidePresent())
+    {
+        QString cardThird = entry->getThirdSide();
+        cardThird = stringToFlashcardsFormat (cardThird);
+        
+        exportTo->setColumnValue ("Text 3", cardThird);
+    }
+    
 	exportTo->submitRow();
 }
 
-QString DatabaseExporter::complexDateToStringLocalized (ComplexDate date, HistoricalEntry* entry)
+/*QString DatabaseExporter::complexDateToStringLocalized (ComplexDate date, SimpleFlashcard* entry)
 {
-	// TODO: long dash
 	if (date.end.isSpecified())
 		return simpleDateToStringLocalized (date.begin, entry) + " &mdash; " + simpleDateToStringLocalized (date.end, entry);
 	else
 		return simpleDateToStringLocalized (date.begin, entry);
 }
 
-QString DatabaseExporter::simpleDateToStringLocalized (SimpleDate date, HistoricalEntry* entry)
+QString DatabaseExporter::simpleDateToStringLocalized (SimpleDate date, SimpleFlashcard* entry)
 {
 	const QString space = "&nbsp";
 
@@ -322,16 +230,16 @@ QString DatabaseExporter::simpleDateToStringLocalized (SimpleDate date, Historic
 		return twoWords[1] + space + QString::number (date.year);
 }
 
-QString DatabaseExporter::variableValue (QString name, HistoricalEntry* entry)
+QString DatabaseExporter::variableValue (QString name, SimpleFlashcard* entry)
 {
-	QString value = entry->variableStack.getVariableValue (name);
+	QString value = entry->getVariableStackState().getVariableValue (name);
 	verify (!value.isNull(), "Variable '" + name + "' not defined (required by exporter).");
 	return value;
 }
 
-bool DatabaseExporter::booleanVariableValue (QString name, HistoricalEntry* entry)
+bool DatabaseExporter::booleanVariableValue (QString name, SimpleFlashcard* entry)
 {
 	QString value = variableValue (name, entry);
 	verify (value == "true" || value == "false", "Variable '" + name + "' has non-boolean value '" + value + "'.");
 	return value == "true";
-}
+}*/

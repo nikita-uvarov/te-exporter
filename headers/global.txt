@@ -19,5 +19,6 @@
 
 #push_replacement_dash_&mdash;_
 #push_replacement_bullet_&bull;_
+#push_replacement_empty[.]?__
 
 // kate: syntax ActionScript 2.0;

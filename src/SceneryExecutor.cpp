@@ -1,6 +1,10 @@
 #include "SceneryExecutor.h"
 #include "Util.h"
 #include "DatabaseExporter.h"
+#include "FlashcardsDatabaseParser.h"
+#include "HistoricalFlashcards.h"
+#include "QuestionFlashcard.h"
+#include "WordSpellingFlashcard.h"
 
 #include <QStringList>
 #include <QFile>
@@ -64,6 +68,11 @@ QString SceneryCommand::getArgument (QString key, QString defaultValue)
 		failure ("Mandatory argument missing: " + key);
 
 	return defaultValue;
+}
+
+QStringList SceneryCommand::getKeys()
+{
+    return arguments.keys();
 }
 
 void SceneryCommand::dump()
@@ -133,6 +142,23 @@ void SceneryExecutor::executeCommand (SceneryCommand& cmd)
 		localization->parse (contents.first);
 	}
 	else */
+    
+    shared_ptr <VariableStack> variableStack;
+    
+    if (cmd.name == "load" || cmd.name == "export")
+    {
+        variableStack.reset (new VariableStack());
+        
+        QStringList keys = cmd.getKeys();
+        const QString setVariableKeyPrefix = "set-";
+        
+        for (auto it: keys)
+            if (it.startsWith (setVariableKeyPrefix))
+            {
+                QString key = it.right (it.length() - setVariableKeyPrefix.length());
+                variableStack->pushVariable (key, cmd.getArgument (it));
+            }
+    }
 
 	if (cmd.name == "load")
 	{
@@ -143,10 +169,14 @@ void SceneryExecutor::executeCommand (SceneryCommand& cmd)
 		QPair <QString, QString> fileContents = FileReaderSingletone::instance().readContents (dbPath, "global");
 
 		shared_ptr <DatabaseParser> parser (new DatabaseParser);
-
+        
+        parser->registerBlockParser <HistoryBlockParser> ("history");
+        parser->registerBlockParser <QuestionBlockParser> ("question");
+        parser->registerBlockParser <WordSpellingBlockParser> ("russian-wordspelling");
+        
 		QPair <QString, QString> globalHeaderContents = FileReaderSingletone::instance().readContents ("global.txt", DATABASE_INCLUDE_DIRECTORIES_CONTEXT);
-		shared_ptr <HistoricalDatabase> globalHeader = parser->parseDatabase (globalHeaderContents.second, globalHeaderContents.first, nullptr);
-		shared_ptr <HistoricalDatabase> database = parser->parseDatabase (fileContents.second, fileContents.first, globalHeader);
+		shared_ptr <FlashcardsDatabase> globalHeader = parser->parseDatabase (globalHeaderContents.second, globalHeaderContents.first, nullptr, variableStack);
+        shared_ptr <FlashcardsDatabase> database = parser->parseDatabase (fileContents.second, fileContents.first, globalHeader, nullptr);
 
 		shared_ptr <DatabaseExporter> exporter (new DatabaseExporter (database.get()));
 
@@ -181,9 +211,9 @@ void SceneryExecutor::executeCommand (SceneryCommand& cmd)
 			failure ("Database not found: '" + dbName + "'.");
 
 		if (decks.count (deckName) == 0)
-			decks[deckName] = shared_ptr <HistoricalDeck> (new HistoricalDeck);
+            decks[deckName] = shared_ptr <FlashcardsDeck> (new FlashcardsDeck);
 
-		HistoricalEventExportMode eventExportMode = HistoricalEventExportMode::NAME_TO_DATE_AND_DEFINITION;
+		/*HistoricalEventExportMode eventExportMode = HistoricalEventExportMode::NAME_TO_DATE_AND_DEFINITION;
 		QString eventExportModeString = cmd.getArgument ("event-export-mode", "name-to-date-and-definition").toLower();
 
 		if (eventExportModeString == "name-to-date-and-definition")
@@ -203,11 +233,12 @@ void SceneryExecutor::executeCommand (SceneryCommand& cmd)
 			termExportMode = HistoricalTermExportMode::INVERSE;
 		else
 			failure ("Unknown term export mode '" + termExportModeString + "'.");
+        */
 
 		shared_ptr <DatabaseExporter> exporter (new DatabaseExporter (databases[dbName].get()));
 
 		qstdout << "Exporting database '" + dbName + "' to deck '" + deckName + "'." << endl;
-		exporter->exportDatabase (decks[deckName].get(), eventExportMode, termExportMode);
+		exporter->exportDatabase (decks[deckName].get(), variableStack->currentState());
 	}
 	else if (cmd.name == "save")
 	{
@@ -225,7 +256,7 @@ void SceneryExecutor::executeCommand (SceneryCommand& cmd)
 
 		QTextStream exportStream (&exportTo);
 
-		shared_ptr <HistoricalDeck> deck = decks[deckName];
+		shared_ptr <FlashcardsDeck> deck = decks[deckName];
 		qstdout << "Writing deck '" << deckName << "' to file '" << fileName << "'." << endl;
 
 		QString mediaDirectoryName = QFileInfo (fileName).baseName() + "-media";
@@ -257,17 +288,17 @@ void SceneryExecutor::executeCommand (SceneryCommand& cmd)
 		if (databases.count (destinationDb) > 0)
 			failure ("Duplicate database '" + destinationDb + "'.");
 
-		databases[destinationDb] = shared_ptr <HistoricalDatabase> (new HistoricalDatabase (databases[sourceDb]->variableStack));
+        databases[destinationDb] = shared_ptr <FlashcardsDatabase> (new FlashcardsDatabase (databases[sourceDb]->variableStack));
 
-		QVector <shared_ptr <HistoricalEntry> >& sourceEntries = databases[sourceDb]->entries,
+		QVector <shared_ptr <SimpleFlashcard> >& sourceEntries = databases[sourceDb]->entries,
 								               & destinationEntries = databases[destinationDb]->entries;
 
 		// More advanced filters are easy to implement, if really needed (probably date filter would be useless)
 		QString tagFilter = cmd.getArgument ("tag", "*");
 
-		for (shared_ptr <HistoricalEntry> e: sourceEntries)
+        for (shared_ptr <SimpleFlashcard> e: sourceEntries)
 		{
-			if (tagFilter != "*" && e->tag != tagFilter) continue;
+			if (tagFilter != "*" && e->getTag() != tagFilter) continue;
 
 			destinationEntries.push_back (e);
 		}

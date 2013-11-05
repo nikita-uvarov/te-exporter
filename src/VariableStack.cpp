@@ -78,39 +78,46 @@ bool VariableStack::popVariable (QString name)
 	}
 }
 
+QString VariableStack::getVariableExpansion (QString value)
+{
+    QString original = value;
+    for (int i = 0; i < value.length(); i++)
+    {
+        if (value[i] == '\\')
+        {
+            value = value.left (i) + value.right (value.length() - i - 1);
+            continue;
+        }
+        
+        if (value[i] == '$')
+        {
+            int trimFrom = i;
+            i++;
+            QString subName = "";
+            
+            while (i < value.length() && value[i] != ' ')
+                subName += value[i++];
+            
+            if (subName.isEmpty())
+                failure ("Invalid value '" + original + "' for variable '" + subName + "': unescaped dollar sign found.");
+            
+            QString subWith = currentState().getVariableValue (subName);
+            if (subWith.isNull()) continue;
+            
+            value = value.left (trimFrom) + subWith + (i < value.length() ? value.right (value.length() - i - 1) : "");
+            i = trimFrom + subWith.length() - 1;
+        }
+    }
+    return value;
+}
+
+
 void VariableStack::pushVariable (QString name, QString value)
 {
 	QString original = value;
 	// Bash-like substitute variables in value string
-
-	for (int i = 0; i < value.length(); i++)
-	{
-		if (value[i] == '\\')
-		{
-			value = value.left (i) + value.right (value.length() - i - 1);
-			continue;
-		}
-
-		if (value[i] == '$')
-		{
-			int trimFrom = i;
-			i++;
-			QString subName = "";
-
-			while (i < value.length() && value[i] != ' ')
-				subName += value[i++];
-
-			if (subName.isEmpty())
-				failure ("Invalid value '" + original + "' for variable '" + subName + "': unescaped dollar sign found.");
-
-			QString subWith = currentState().getVariableValue (subName);
-			if (subWith.isNull()) subWith = "";
-
-			value = value.left (trimFrom) + subWith + (i < value.length() ? value.right (value.length() - i - 1) : "");
-			i = trimFrom + subWith.length() - 1;
-		}
-	}
-
+    value = getVariableExpansion (value);
+	
 	//qstderr << "Set variable '" + name + "' to '" + value + "'" << endl;
 
 	stackVariables.push_back (name);
@@ -129,3 +136,28 @@ void VariableStack::dump()
 	}
 }
 
+void VariableStackStateHolder::setFallbackVariableStackState(VariableStackState fallback)
+{
+    fallbackStackPresent = true;
+    fallbackVariableStack = fallback;
+}
+
+void VariableStackStateHolder::removeFallbackVariableStackState()
+{
+    fallbackStackPresent = false;
+}
+
+QString VariableStackStateHolder::variableValue (QString name)
+{
+    QString value = variableStack.getVariableValue (name);
+    if (value.isNull() && fallbackStackPresent)
+        value = fallbackVariableStack.getVariableValue (name);
+    return value;
+}
+
+bool VariableStackStateHolder::booleanVariableValue (QString name)
+{
+    QString value = variableValue (name);
+    verify (value == "true" || value == "false", "Variable '" + name + "' has non-boolean value '" + value + "'.");
+    return value == "true";
+}

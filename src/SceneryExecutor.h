@@ -6,8 +6,9 @@
 #include <QString>
 #include <QVector>
 #include <QSet>
+#include <QStringList>
 
-#include "HistoricalDatabase.h"
+#include "FlashcardsDatabaseParser.h"
 #include "DatabaseExporter.h"
 
 using std::shared_ptr;
@@ -20,7 +21,8 @@ public :
 
 	void parse (int commandLine, QString string);
 	QString getArgument (QString key, QString defaultValue = nullptr);
-	void dump();
+	QStringList getKeys();
+    void dump();
 
 private :
 	int commandLine;
@@ -46,8 +48,8 @@ private :
 	QVector <SceneryCommand> commands;
 	QString exportDirectoryUrl;
 
-	QMap <QString, shared_ptr <HistoricalDatabase> > databases;
-	QMap <QString, shared_ptr <HistoricalDeck> > decks;
+	QMap <QString, shared_ptr <FlashcardsDatabase> > databases;
+	QMap <QString, shared_ptr <FlashcardsDeck> > decks;
 
 	void executeCommand (SceneryCommand& cmd);
 };

@@ -9,4 +9,6 @@
 #push term_to_definition_preamble: $preamble_style_opening определение термина$preamble_style_closing
 #push definition_to_term_preamble: $preamble_style_opening название термина$preamble_style_closing
 
+#push russian_word_spelling_preamble: $preamble_style_opening вставьте пропущенные буквы и знаки препинания$preamble_style_closing
+
 // kate: syntax ActionScript 2.0;

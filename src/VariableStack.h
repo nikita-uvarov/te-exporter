@@ -31,6 +31,9 @@ public :
 
 	// Returns false if there were no variable. Empty name means pop last.
 	bool popVariable (QString name);
+    
+    // Replaces $varname with its value
+    QString getVariableExpansion (QString value);
 
 	VariableStackState currentState();
 
@@ -41,6 +44,27 @@ private :
 	QMap < QString, QVector <QString> > currentStackState;
 	QMap < QString, QVector < QPair <int, QString> > > variableNameToVersionPairs;
 	int currentVersion;
+};
+
+// Provides a nice variable stack interface to children classes
+class VariableStackStateHolder 
+{
+public :
+    void setFallbackVariableStackState (VariableStackState fallback);
+    void removeFallbackVariableStackState();
+    
+protected :
+    VariableStackStateHolder (VariableStackState state) :
+        variableStack (state), fallbackStackPresent (false)
+    {}
+    
+    QString variableValue (QString name);
+    bool booleanVariableValue (QString name);
+    
+    VariableStackState variableStack;
+    
+    bool fallbackStackPresent;
+    VariableStackState fallbackVariableStack;
 };
 
 #endif // VARIABLE_STACK_H

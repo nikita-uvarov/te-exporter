@@ -4,7 +4,7 @@
 #push_replacement_>=_&ge;_
 #push_replacement_<=_&le;_
 
-#push_replacement_^(.*)$_<size 12>\1</size></i>_
+#push_replacement_^(..*)$_<size 12>\1</size></i>_
 #push_replacement_'([^']*)'_</size><i><size 20>\1</size></i><size 12>_
 #push_replacement_\^([^\^]*)\^_<sup>\1</sup>_
 #push_replacement$_([^_]*)_$<sub>\1</sub>$
@@ -35,8 +35,6 @@
 #push_replacement_vbar_&#124;_
 #push_replacement_vec_&#8407;_
 #push_replacement_prod_&#10799;_
-
-#push_replacement_empty[.]?__
 
 #push_replacement_DECKSTYLERECOMMENDATIONS_&bull; Установите для колоды (<i>Настройки колоды &mdash; Font / Alignment &mdash; Font</i>) шрифт, отличный от стандартного (например, <i>Georgia</i>), чтобы спецсимволы выглядели нормально._
 

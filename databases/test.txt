@@ -6,6 +6,8 @@
 
 #include front-page.txt
 
+#push parsers: history,question
+
 [themea]
 
 6.ноября.1812 - битва под Красным
@@ -30,3 +32,13 @@
 
 Can we write formulas, captain?
 Yes: 'PV=nuRT^deltay^'
+
+#pop parsers
+
+#push parsers: russian-wordspelling
+
+крас`ивее
+тер(р)итория [не] очищена {утром}
+^День ^Победы
+
+#pop parsers
